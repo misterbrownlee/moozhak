@@ -1,6 +1,6 @@
 # Muzak Configuration
 # copy this file to ../.mzkconfig
-# and update whatever setting turn your propeller
+# and update whatever setting turns your propeller
 
 # Your Discogs token
 DISCOGS_TOKEN=
