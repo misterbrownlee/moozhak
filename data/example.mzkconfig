@@ -1,0 +1,20 @@
+# Muzak Configuration
+# copy this file to ../.mzkconfig
+# and update whatever setting turn your propeller
+
+# Your Discogs token
+DISCOGS_TOKEN=
+
+# Clean dist folder before each command (set to any value to enable)
+# by default outputs are timestamped and will pile up after a bit
+# ALWAYS_CLEAN=true
+
+# Verbose mode - echo commands and HTTP responses to the console
+# VERBOSE=true
+
+# Results per page (default: 5)
+# PER_PAGE=5
+
+# Default search type: artist, release, master, label (default: none)
+# DEFAULT_TYPE=master
+

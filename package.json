@@ -1,0 +1,28 @@
+{
+  "name": "muzak",
+  "version": "1.0.0",
+  "description": "CLI tool to search Discogs and find where to buy tracks from playlists",
+  "type": "module",
+  "bin": {
+    "muzak": "./cli.js"
+  },
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "start": "node cli.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "discogs",
+    "music",
+    "cli",
+    "playlist"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "disconnect": "^1.2.2",
+    "meow": "^14.0.0"
+  }
+}

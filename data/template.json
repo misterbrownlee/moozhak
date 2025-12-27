@@ -1,0 +1,26 @@
+{
+  "type": "playlist",
+  "params": {
+    "file": "",
+    "filename": "",
+    "limit": 5
+  },
+  "result": {
+    "tracks": [
+      {
+        "title": "",
+        "artist": "",
+        "album": "",
+        "isrc": "",
+        "match": {
+          "type": "",
+          "title": "",
+          "year": null,
+          "url": "",
+          "id": null
+        }
+      }
+    ]
+  }
+}
+

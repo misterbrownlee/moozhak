@@ -1,0 +1,72 @@
+{
+  "type": "search",
+  "params": {
+    "query": "dap kings horn section",
+    "searchType": "master",
+    "per_page": 5
+  },
+  "result": {
+    "tracks": [
+      {
+        "title": "Kesha Featuring The Dap-Kings Horns* - Woman",
+        "artist": "Kesha Featuring The Dap-Kings Horns*",
+        "album": "",
+        "isrc": "",
+        "match": {
+          "type": "master",
+          "year": "2017",
+          "url": "https://www.discogs.com/master/1268605-Kesha-Featuring-The-Dap-Kings-Horns-Woman",
+          "id": 1268605
+        }
+      },
+      {
+        "title": "Kesha - Rainbow",
+        "artist": "Kesha",
+        "album": "",
+        "isrc": "",
+        "match": {
+          "type": "master",
+          "year": "2017",
+          "url": "https://www.discogs.com/master/1221827-Kesha-Rainbow",
+          "id": 1221827
+        }
+      },
+      {
+        "title": "The Heavy - The House That Dirt Built",
+        "artist": "The Heavy",
+        "album": "",
+        "isrc": "",
+        "match": {
+          "type": "master",
+          "year": "2009",
+          "url": "https://www.discogs.com/master/304979-The-Heavy-The-House-That-Dirt-Built",
+          "id": 304979
+        }
+      },
+      {
+        "title": "Mark Ronson Feat. Alex Greenwald - Just",
+        "artist": "Mark Ronson Feat. Alex Greenwald",
+        "album": "",
+        "isrc": "",
+        "match": {
+          "type": "master",
+          "year": "2006",
+          "url": "https://www.discogs.com/master/850605-Mark-Ronson-Feat-Alex-Greenwald-Just",
+          "id": 850605
+        }
+      },
+      {
+        "title": "Mark Ronson - God Put A Smile Upon Your Face (Aaron La Crate / Gutter Remix) / Toxic (Paul Nice Remix)",
+        "artist": "Mark Ronson",
+        "album": "",
+        "isrc": "",
+        "match": {
+          "type": "master",
+          "year": "2007",
+          "url": "https://www.discogs.com/master/51400-Mark-Ronson-God-Put-A-Smile-Upon-Your-Face-Aaron-La-Crate-Gutter-Remix-Toxic-Paul-Nice-Remix",
+          "id": 51400
+        }
+      }
+    ]
+  }
+}

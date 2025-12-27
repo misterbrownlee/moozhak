@@ -1,0 +1,72 @@
+{
+  "type": "search",
+  "params": {
+    "query": "dap kings",
+    "searchType": "artist",
+    "per_page": 5
+  },
+  "result": {
+    "tracks": [
+      {
+        "title": "The Dap-Kings",
+        "artist": "The Dap-Kings",
+        "album": "",
+        "isrc": "",
+        "match": {
+          "type": "artist",
+          "year": null,
+          "url": "https://www.discogs.com/artist/261971-The-Dap-Kings",
+          "id": 261971
+        }
+      },
+      {
+        "title": "Sharon Jones & The Dap-Kings",
+        "artist": "Sharon Jones & The Dap-Kings",
+        "album": "",
+        "isrc": "",
+        "match": {
+          "type": "artist",
+          "year": null,
+          "url": "https://www.discogs.com/artist/83816-Sharon-Jones-The-Dap-Kings",
+          "id": 83816
+        }
+      },
+      {
+        "title": "Dap Kings Horn Section",
+        "artist": "Dap Kings Horn Section",
+        "album": "",
+        "isrc": "",
+        "match": {
+          "type": "artist",
+          "year": null,
+          "url": "https://www.discogs.com/artist/484281-Dap-Kings-Horn-Section",
+          "id": 484281
+        }
+      },
+      {
+        "title": "Third Coast Kings",
+        "artist": "Third Coast Kings",
+        "album": "",
+        "isrc": "",
+        "match": {
+          "type": "artist",
+          "year": null,
+          "url": "https://www.discogs.com/artist/1801431-Third-Coast-Kings",
+          "id": 1801431
+        }
+      },
+      {
+        "title": "Victor Axelrod",
+        "artist": "Victor Axelrod",
+        "album": "",
+        "isrc": "",
+        "match": {
+          "type": "artist",
+          "year": null,
+          "url": "https://www.discogs.com/artist/309992-Victor-Axelrod",
+          "id": 309992
+        }
+      }
+    ]
+  }
+}

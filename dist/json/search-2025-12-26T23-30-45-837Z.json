@@ -1,0 +1,72 @@
+{
+  "type": "search",
+  "params": {
+    "query": "dap kings",
+    "searchType": "master",
+    "per_page": 5
+  },
+  "result": {
+    "tracks": [
+      {
+        "title": "Sharon Jones And The Dap-Kings* - Dap-Dippin' With...",
+        "artist": "Sharon Jones And The Dap-Kings*",
+        "album": "",
+        "isrc": "",
+        "match": {
+          "type": "master",
+          "year": "2002",
+          "url": "https://www.discogs.com/master/50147-Sharon-Jones-And-The-Dap-Kings-Dap-Dippin-With",
+          "id": 50147
+        }
+      },
+      {
+        "title": "Sharon Jones & The Dap-Kings - 100 Days, 100 Nights",
+        "artist": "Sharon Jones & The Dap-Kings",
+        "album": "",
+        "isrc": "",
+        "match": {
+          "type": "master",
+          "year": "2007",
+          "url": "https://www.discogs.com/master/50177-Sharon-Jones-The-Dap-Kings-100-Days-100-Nights",
+          "id": 50177
+        }
+      },
+      {
+        "title": "Sharon Jones & The Dap-Kings - Soul Of A Woman",
+        "artist": "Sharon Jones & The Dap-Kings",
+        "album": "",
+        "isrc": "",
+        "match": {
+          "type": "master",
+          "year": "2017",
+          "url": "https://www.discogs.com/master/1268234-Sharon-Jones-The-Dap-Kings-Soul-Of-A-Woman",
+          "id": 1268234
+        }
+      },
+      {
+        "title": "Sharon Jones & The Dap-Kings - I Learned The Hard Way",
+        "artist": "Sharon Jones & The Dap-Kings",
+        "album": "",
+        "isrc": "",
+        "match": {
+          "type": "master",
+          "year": "2010",
+          "url": "https://www.discogs.com/master/246656-Sharon-Jones-The-Dap-Kings-I-Learned-The-Hard-Way",
+          "id": 246656
+        }
+      },
+      {
+        "title": "Sharon Jones And The Dap-Kings* - Naturally",
+        "artist": "Sharon Jones And The Dap-Kings*",
+        "album": "",
+        "isrc": "",
+        "match": {
+          "type": "master",
+          "year": "2005",
+          "url": "https://www.discogs.com/master/50156-Sharon-Jones-And-The-Dap-Kings-Naturally",
+          "id": 50156
+        }
+      }
+    ]
+  }
+}
