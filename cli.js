@@ -1,14 +1,16 @@
 #!/usr/bin/env node
 import readline from 'readline';
 import meow from 'meow';
+import ansis from 'ansis';
 import { fileConfig, isVerbose, getPerPage, getDefaultType } from './lib/config.js';
-import { initLog, writeLog } from './lib/logger.js';
+import { initLog, writeLog, log } from './lib/logger.js';
 import { ensureDistDir } from './lib/output.js';
 import { createClient } from './lib/discogs.js';
 import { handleSearch } from './lib/commands/search.js';
 import { handleClean } from './lib/commands/clean.js';
 
 const cli = meow(`
+
   Usage
     $ muzak [options]
 
@@ -16,6 +18,7 @@ const cli = meow(`
     --token, -t        Discogs personal access token (or set DISCOGS_TOKEN env var)
 
   Starts an interactive session. Type 'help' for available commands.
+
 `, {
   importMeta: import.meta,
   flags: {
@@ -47,7 +50,7 @@ let mzk = null;
  */
 function getPrompt() {
   const mode = sessionFlags.type || 'all';
-  return `muzak [searh mode: ${mode}]> `;
+  return `↳ moozhak [search-type: ${mode}] > `;
 }
 
 /**
@@ -63,7 +66,7 @@ function updatePrompt() {
  * Display help for session commands
  */
 function showSessionHelp() {
-  console.log(`
+  log.plain(`
   Available Commands:
     search <query>       Search Discogs for a release or artist
     settings             Show current session settings
@@ -99,9 +102,9 @@ async function executeCommand(input) {
 
   // Verbose command echo
   if (sessionFlags.verbose) {
-    console.log(`\n┌─ Command ────────────────────────────────────────────────`);
-    console.log(`│ Input: ${trimmed}`);
-    console.log('└──────────────────────────────────────────────────────────');
+    log.debug(`\n┌─ Command ────────────────────────────────────────────────`);
+    log.debug(`│ Input: ${trimmed}`);
+    log.debug('└──────────────────────────────────────────────────────────');
   }
 
   const parts = trimmed.match(/(?:[^\s"]+|"[^"]*")+/g) || [];
@@ -113,7 +116,7 @@ async function executeCommand(input) {
     case 'quit':
     case 'q':
       writeLog('Session ended by user');
-      console.log('Goodbye!');
+      log.success('\nGoodbye!');
       return false;
 
     case 'help':
@@ -131,8 +134,8 @@ async function executeCommand(input) {
 
     case 'search':
       if (args.length === 0) {
-        console.error('Error: Please provide a search query');
-        console.log('Usage: search <query>');
+        log.error('Please provide a search query');
+        log.info('Usage: search <query>');
         return true;
       }
       await handleSearch(db, args.join(' '), sessionFlags);
@@ -142,8 +145,8 @@ async function executeCommand(input) {
       return handleSet(args);
 
     default:
-      console.error(`Unknown command: ${command}`);
-      console.log("Type 'help' for available commands.");
+      log.error(`Unknown command: ${command}`);
+      log.info("Type 'help' for available commands.");
       return true;
   }
 }
@@ -152,12 +155,12 @@ async function executeCommand(input) {
  * Display current session settings
  */
 function showSettings() {
-  console.log('\nSession Settings:');
-  console.log('───────────────────────────────────');
-  console.log(`  type:      ${sessionFlags.type || 'none (all)'}`);
-  console.log(`  per_page:  ${sessionFlags.per_page}`);
-  console.log(`  verbose:   ${sessionFlags.verbose ? 'on' : 'off'}`);
-  console.log();
+  log.header('\nSession Settings:');
+  log.plain('───────────────────────────────────');
+  log.plain(`  type:      ${sessionFlags.type || 'none (all)'}`);
+  log.plain(`  per_page:  ${sessionFlags.per_page}`);
+  log.plain(`  verbose:   ${sessionFlags.verbose ? 'on' : 'off'}`);
+  log.plain('');
 }
 
 /**
@@ -167,10 +170,10 @@ function handleSet(args) {
   const [option, value] = args;
 
   if (!option) {
-    console.log('Current settings:');
-    console.log(`  type: ${sessionFlags.type || 'none (all)'}`);
-    console.log(`  per_page: ${sessionFlags.per_page}`);
-    console.log(`  verbose: ${sessionFlags.verbose ? 'on' : 'off'}`);
+    log.header('Current settings:');
+    log.plain(`  type: ${sessionFlags.type || 'none (all)'}`);
+    log.plain(`  per_page: ${sessionFlags.per_page}`);
+    log.plain(`  verbose: ${sessionFlags.verbose ? 'on' : 'off'}`);
     return true;
   }
 
@@ -179,13 +182,13 @@ function handleSet(args) {
       const typeVal = value?.toLowerCase();
       if (!typeVal || typeVal === 'none' || typeVal === 'all') {
         sessionFlags.type = null;
-        console.log('Search type: none (all)');
+        log.success('Search type: none (all)');
       } else if (VALID_TYPES.includes(typeVal)) {
         sessionFlags.type = typeVal;
-        console.log(`Search type: ${sessionFlags.type}`);
+        log.success(`Search type: ${sessionFlags.type}`);
       } else {
-        console.error(`Error: invalid type '${value}'`);
-        console.log(`Valid types: ${VALID_TYPES.join(', ')}, none`);
+        log.error(`Invalid type '${value}'`);
+        log.info(`Valid types: ${VALID_TYPES.join(', ')}, none`);
       }
       updatePrompt();
       break;
@@ -193,21 +196,21 @@ function handleSet(args) {
     case 'per_page':
       const num = parseInt(value, 10);
       if (isNaN(num) || num < 1) {
-        console.error('Error: per_page must be a positive number');
+        log.error('per_page must be a positive number');
       } else {
         sessionFlags.per_page = num;
-        console.log(`Results per page: ${sessionFlags.per_page}`);
+        log.success(`Results per page: ${sessionFlags.per_page}`);
       }
       break;
 
     case 'verbose':
       sessionFlags.verbose = value?.toLowerCase() === 'on' || value === 'true';
-      console.log(`Verbose mode: ${sessionFlags.verbose ? 'on' : 'off'}`);
+      log.success(`Verbose mode: ${sessionFlags.verbose ? 'on' : 'off'}`);
       break;
 
     default:
-      console.error(`Unknown option: ${option}`);
-      console.log('Available options: type, per_page, verbose');
+      log.error(`Unknown option: ${option}`);
+      log.info('Available options: type, per_page, verbose');
   }
 
   writeLog(`Settings updated: ${JSON.stringify(sessionFlags)}`);
@@ -218,35 +221,44 @@ function handleSet(args) {
  * Start interactive session
  */
 async function startSession() {
+
+  log.divider(true);
+  log.header('Moohack CLI - Interactive Session\n');
+
+
   // Check if ALWAYS_CLEAN is set in config
   if (fileConfig.ALWAYS_CLEAN) {
-    console.log('ALWAYS_CLEAN is enabled, cleaning dist folder and logs...');
+    log.info('ALWAYS_CLEAN is enabled, cleaning dist folder and logs...');
     handleClean();
   }
 
+  // Initialize log file for this session
   // Ensure dist folder exists
   ensureDistDir();
-
-  // Initialize log file for this session
   initLog();
+
+  
   writeLog('Session started');
   writeLog(`Token: ${token ? 'configured' : 'not configured'}`);
-
-  console.log('\n🎵 Muzak CLI - Interactive Session');
-  console.log('───────────────────────────────────');
   
   if (!token) {
-    console.warn('⚠️  No Discogs token configured. Some features may not work.');
-    console.warn('   Set DISCOGS_TOKEN in .mzkconfig or environment.\n');
+    log.warn('No Discogs token configured. Some features may not work.');
+    log.warn('Set DISCOGS_TOKEN in .mzkconfig or environment.\n');
   } else {
-    console.log('✓ Discogs token configured\n');
+    log.success('Discogs token configured');
   }
 
   if (sessionFlags.verbose) {
-    console.log('📢 Verbose mode enabled\n');
+    log.success('Verbose mode enabled\n');
   }
 
-  console.log("Type 'help' for available commands, 'exit' to quit.\n");
+
+
+  log.plain('\n');
+
+  log.info("Type 'help' for available commands, 'exit' to quit.\n");
+
+  log.divider(true);
 
   mzk = readline.createInterface({
     input: process.stdin,
@@ -264,7 +276,7 @@ async function startSession() {
         return;
       }
     } catch (error) {
-      console.error('Error:', error.message);
+      log.error(error.message);
       writeLog(`Error: ${error.message}`);
     }
     mzk.prompt();
