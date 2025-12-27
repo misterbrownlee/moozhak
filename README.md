@@ -1,4 +1,4 @@
-# Muzak
+# Moozhak
 
 A Node.js CLI tool to search the Discogs music database. Interactive session-based interface with configurable search filters.
 
