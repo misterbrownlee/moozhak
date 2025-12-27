@@ -47,7 +47,7 @@ let mzk = null;
  */
 function getPrompt() {
   const mode = sessionFlags.type || 'all';
-  return `muzak [${mode}]> `;
+  return `muzak [searh mode: ${mode}]> `;
 }
 
 /**
