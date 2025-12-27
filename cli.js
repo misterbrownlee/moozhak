@@ -2,12 +2,13 @@
 import readline from 'readline';
 import meow from 'meow';
 import ansis from 'ansis';
-import { fileConfig, isVerbose, getPerPage, getDefaultType } from './lib/config.js';
+import { fileConfig, isVerbose, getPerPage, getDefaultType, getDefaultTracksType, getDefaultTracksOutput } from './lib/config.js';
 import { initLog, writeLog, log } from './lib/logger.js';
 import { ensureDistDir } from './lib/output.js';
 import { createClient } from './lib/discogs.js';
 import { handleSearch } from './lib/commands/search.js';
 import { handleClean } from './lib/commands/clean.js';
+import { handleTracks } from './lib/commands/tracks.js';
 
 const cli = meow(`
 
@@ -36,7 +37,9 @@ const VALID_TYPES = ['artist', 'release', 'master', 'label'];
 let sessionFlags = {
   type: getDefaultType(), // Initialize from config (default: null)
   per_page: getPerPage(), // Initialize from config (default: 5)
-  verbose: isVerbose() // Initialize from config
+  verbose: isVerbose(), // Initialize from config
+  tracks_type: getDefaultTracksType(), // Initialize from config (default: 'master')
+  tracks_output: getDefaultTracksOutput() // Initialize from config (default: 'human')
 };
 
 // Create Discogs client
@@ -50,7 +53,7 @@ let mzk = null;
  */
 function getPrompt() {
   const mode = sessionFlags.type || 'all';
-  return `↳ moozhak [search-type: ${mode}] > `;
+  return `\n ↳ moozhak > `;
 }
 
 /**
@@ -69,22 +72,27 @@ function showSessionHelp() {
   log.plain(`
   Available Commands:
     search <query>       Search Discogs for a release or artist
+    tracks <id>          Get tracklist using current tracks_type setting
+    tracks <type> <id>   Get tracklist (type: master or release)
     settings             Show current session settings
     clean                Delete all files in the dist folder
     help                 Show this help message
     exit                 Exit the session
 
-  Search Options (set before search):
-    set type <t>         Filter by type: artist, release, master, label, none
-    set per_page <n>     Set results per page (default: 5)
-    set verbose <on|off> Echo commands and HTTP responses
+  Settings (set before commands):
+    set type <t>           Filter by type: artist, release, master, label, none
+    set per_page <n>       Set results per page (default: 5)
+    set tracks_type <t>    Set default tracks type: master, release
+    set tracks_output <f>  Set tracks output format: human, csv, pipe, markdown
+    set verbose <on|off>   Echo commands and HTTP responses
 
   Examples:
     search Daft Punk
     set type master
     search Bonobo
-    set per_page 10
-    search "Pretty Lights"
+    tracks 1234
+    set tracks_output csv
+    tracks release 249504
 `);
 }
 
@@ -102,9 +110,12 @@ async function executeCommand(input) {
 
   // Verbose command echo
   if (sessionFlags.verbose) {
-    log.debug(`\n┌─ Command ────────────────────────────────────────────────`);
+    log.debug(`\n┌─ Command ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─`);
     log.debug(`│ Input: ${trimmed}`);
-    log.debug('└──────────────────────────────────────────────────────────');
+    log.debug('└─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─');
+  } else {
+    log.header(`\n────────────────────────────────────────────────────`);
+
   }
 
   const parts = trimmed.match(/(?:[^\s"]+|"[^"]*")+/g) || [];
@@ -116,12 +127,15 @@ async function executeCommand(input) {
     case 'quit':
     case 'q':
       writeLog('Session ended by user');
-      log.success('\nGoodbye!');
+      log.plain('');
+      log.success('Goodbye!');
+      // log.header(`\n────────────────────────────────────────────────────\n`);
       return false;
 
     case 'help':
     case '?':
       showSessionHelp();
+      log.header(`\n────────────────────────────────────────────────────`);
       return true;
 
     case 'clean':
@@ -141,6 +155,32 @@ async function executeCommand(input) {
       await handleSearch(db, args.join(' '), sessionFlags);
       return true;
 
+    case 'tracks':
+      if (args.length === 0) {
+        log.error('Please provide an ID');
+        log.info('Usage: tracks <id> or tracks <master|release> <id>');
+        log.info(`if no type is specified the current defalt track type will be used (${sessionFlags.tracks_type})`);
+        return true;
+      }
+      let trackType, trackId;
+      // Check if first arg is a type or an ID
+      if (args.length === 1 || !isNaN(parseInt(args[0], 10))) {
+        // Just ID provided, use default tracks_type
+        trackType = sessionFlags.tracks_type;
+        trackId = args[0];
+      } else {
+        // Type and ID provided
+        trackType = args[0].toLowerCase();
+        trackId = args[1];
+        if (trackType !== 'master' && trackType !== 'release') {
+          log.error(`Invalid type '${args[0]}'`);
+          log.info('Valid types: master, release');
+          return true;
+        }
+      }
+      await handleTracks(db, trackType, trackId, sessionFlags);
+      return true;
+
     case 'set':
       return handleSet(args);
 
@@ -155,12 +195,14 @@ async function executeCommand(input) {
  * Display current session settings
  */
 function showSettings() {
-  log.header('\nSession Settings:');
-  log.plain('───────────────────────────────────');
-  log.plain(`  type:      ${sessionFlags.type || 'none (all)'}`);
-  log.plain(`  per_page:  ${sessionFlags.per_page}`);
-  log.plain(`  verbose:   ${sessionFlags.verbose ? 'on' : 'off'}`);
+  log.header('\nCurrent Settings:');
   log.plain('');
+  log.plain(`  type:          ${sessionFlags.type || 'none (all)'}`);
+  log.plain(`  per_page:      ${sessionFlags.per_page}`);
+  log.plain(`  tracks_type:   ${sessionFlags.tracks_type}`);
+  log.plain(`  tracks_output: ${sessionFlags.tracks_output}`);
+  log.plain(`  verbose:       ${sessionFlags.verbose ? 'on' : 'off'}`);
+  log.header(`\n────────────────────────────────────────────────────\n`);
 }
 
 /**
@@ -170,10 +212,8 @@ function handleSet(args) {
   const [option, value] = args;
 
   if (!option) {
-    log.header('Current settings:');
-    log.plain(`  type: ${sessionFlags.type || 'none (all)'}`);
-    log.plain(`  per_page: ${sessionFlags.per_page}`);
-    log.plain(`  verbose: ${sessionFlags.verbose ? 'on' : 'off'}`);
+    
+    showSettings();
     return true;
   }
 
@@ -208,9 +248,32 @@ function handleSet(args) {
       log.success(`Verbose mode: ${sessionFlags.verbose ? 'on' : 'off'}`);
       break;
 
+    case 'tracks_type':
+      const tracksTypeVal = value?.toLowerCase();
+      if (tracksTypeVal === 'master' || tracksTypeVal === 'release') {
+        sessionFlags.tracks_type = tracksTypeVal;
+        log.success(`Default tracks type: ${sessionFlags.tracks_type}`);
+      } else {
+        log.error(`Invalid tracks type '${value}'`);
+        log.info('Valid types: master, release');
+      }
+      break;
+
+    case 'tracks_output':
+      const validOutputFormats = ['human', 'csv', 'pipe', 'markdown'];
+      const tracksOutputVal = value?.toLowerCase();
+      if (validOutputFormats.includes(tracksOutputVal)) {
+        sessionFlags.tracks_output = tracksOutputVal;
+        log.success(`Tracks output format: ${sessionFlags.tracks_output}`);
+      } else {
+        log.error(`Invalid tracks output format '${value}'`);
+        log.info('Valid formats: human, csv, pipe, markdown');
+      }
+      break;
+
     default:
       log.error(`Unknown option: ${option}`);
-      log.info('Available options: type, per_page, verbose');
+      log.info('Available options: type, per_page, tracks_type, tracks_output, verbose');
   }
 
   writeLog(`Settings updated: ${JSON.stringify(sessionFlags)}`);
@@ -258,7 +321,7 @@ async function startSession() {
 
   log.info("Type 'help' for available commands, 'exit' to quit.\n");
 
-  log.divider(true);
+  log.divider();
 
   mzk = readline.createInterface({
     input: process.stdin,
