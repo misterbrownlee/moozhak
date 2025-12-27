@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Config with sensitive data
+.mzkconfig
+
+# LLM context
+llm.md
+
+# Output files
+dist/
+
+# OS files
+.DS_Store
+
