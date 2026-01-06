@@ -18,3 +18,9 @@ DISCOGS_TOKEN=
 # Default search type: artist, release, master, label (default: none)
 # DEFAULT_TYPE=master
 
+# Default tracks type: master or release (default: master)
+# DEFAULT_TRACKS_TYPE=master
+
+# Default tracks output format: human, csv, pipe, markdown (default: human)
+# DEFAULT_TRACKS_OUTPUT=human
+
