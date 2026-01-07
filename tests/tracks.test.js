@@ -38,7 +38,7 @@ jest.unstable_mockModule('../lib/logger.js', () => ({
 }));
 
 // Import after mocking
-const { handleTracks, tracksCommand } = await import('../lib/commands/tracks.js');
+const { handleTracks, tracksCommand, buildTracksOutput, extractReleaseInfo } = await import('../lib/commands/tracks.js');
 
 describe('handleTracks', () => {
   beforeEach(() => {
@@ -342,6 +342,206 @@ describe('tracksCommand', () => {
     expect(result).toBe(true);
     expect(mockLog.error).toHaveBeenCalledWith("Invalid type 'artist'");
     expect(mockGetMaster).not.toHaveBeenCalled();
+  });
+});
+
+describe('extractReleaseInfo (pure function)', () => {
+  it('extracts all fields from complete data', () => {
+    const data = {
+      title: 'Black Sands',
+      artists: [{ name: 'Bonobo' }],
+      year: 2010,
+      tracklist: [{ position: '1', title: 'Prelude' }],
+    };
+
+    const info = extractReleaseInfo(data, 'master', 12345);
+
+    expect(info).toEqual({
+      artists: 'Bonobo',
+      title: 'Black Sands',
+      year: 2010,
+      url: 'https://www.discogs.com/master/12345',
+      tracklist: [{ position: '1', title: 'Prelude' }],
+    });
+  });
+
+  it('joins multiple artists with comma', () => {
+    const data = {
+      title: 'Test',
+      artists: [{ name: 'Artist 1' }, { name: 'Artist 2' }, { name: 'Artist 3' }],
+      tracklist: [],
+    };
+
+    const info = extractReleaseInfo(data, 'master', 1);
+
+    expect(info.artists).toBe('Artist 1, Artist 2, Artist 3');
+  });
+
+  it('handles missing artists', () => {
+    const data = { title: 'Test', tracklist: [] };
+
+    const info = extractReleaseInfo(data, 'master', 1);
+
+    expect(info.artists).toBe('Unknown Artist');
+  });
+
+  it('handles missing title', () => {
+    const data = { artists: [{ name: 'Artist' }], tracklist: [] };
+
+    const info = extractReleaseInfo(data, 'master', 1);
+
+    expect(info.title).toBe('Untitled');
+  });
+
+  it('handles missing year', () => {
+    const data = { title: 'Test', artists: [{ name: 'Artist' }], tracklist: [] };
+
+    const info = extractReleaseInfo(data, 'master', 1);
+
+    expect(info.year).toBeNull();
+  });
+
+  it('handles missing tracklist', () => {
+    const data = { title: 'Test', artists: [{ name: 'Artist' }] };
+
+    const info = extractReleaseInfo(data, 'master', 1);
+
+    expect(info.tracklist).toEqual([]);
+  });
+
+  it('builds correct URL for master type', () => {
+    const data = { title: 'Test', tracklist: [] };
+
+    const info = extractReleaseInfo(data, 'master', 99999);
+
+    expect(info.url).toBe('https://www.discogs.com/master/99999');
+  });
+
+  it('builds correct URL for release type', () => {
+    const data = { title: 'Test', tracklist: [] };
+
+    const info = extractReleaseInfo(data, 'release', 88888);
+
+    expect(info.url).toBe('https://www.discogs.com/release/88888');
+  });
+});
+
+describe('buildTracksOutput (pure function)', () => {
+  const sampleReleaseInfo = {
+    artists: 'Bonobo',
+    title: 'Black Sands',
+    year: 2010,
+    url: 'https://www.discogs.com/master/12345',
+    tracklist: [
+      { position: '1', title: 'Prelude', duration: '2:15' },
+      { position: '2', title: 'Kiara', duration: '5:15' },
+    ],
+  };
+
+  it('builds correct output structure', () => {
+    const output = buildTracksOutput('master', 12345, sampleReleaseInfo);
+
+    expect(output).toEqual({
+      type: 'tracks',
+      params: {
+        sourceType: 'master',
+        id: 12345,
+      },
+      result: {
+        artist: 'Bonobo',
+        title: 'Black Sands',
+        year: 2010,
+        url: 'https://www.discogs.com/master/12345',
+        tracks: [
+          { position: '1', title: 'Prelude', duration: '2:15', type_: 'track' },
+          { position: '2', title: 'Kiara', duration: '5:15', type_: 'track' },
+        ],
+      },
+    });
+  });
+
+  it('sets correct sourceType for release', () => {
+    const releaseInfo = { ...sampleReleaseInfo, url: 'https://www.discogs.com/release/67890' };
+
+    const output = buildTracksOutput('release', 67890, releaseInfo);
+
+    expect(output.params.sourceType).toBe('release');
+    expect(output.params.id).toBe(67890);
+  });
+
+  it('handles empty tracklist', () => {
+    const releaseInfo = { ...sampleReleaseInfo, tracklist: [] };
+
+    const output = buildTracksOutput('master', 12345, releaseInfo);
+
+    expect(output.result.tracks).toEqual([]);
+  });
+
+  it('uses index+1 as position when missing', () => {
+    const releaseInfo = {
+      ...sampleReleaseInfo,
+      tracklist: [
+        { title: 'Track One' },
+        { title: 'Track Two' },
+      ],
+    };
+
+    const output = buildTracksOutput('master', 12345, releaseInfo);
+
+    expect(output.result.tracks[0].position).toBe('1');
+    expect(output.result.tracks[1].position).toBe('2');
+  });
+
+  it('handles missing track title', () => {
+    const releaseInfo = {
+      ...sampleReleaseInfo,
+      tracklist: [{ position: '1', duration: '3:00' }],
+    };
+
+    const output = buildTracksOutput('master', 12345, releaseInfo);
+
+    expect(output.result.tracks[0].title).toBe('');
+  });
+
+  it('handles missing duration', () => {
+    const releaseInfo = {
+      ...sampleReleaseInfo,
+      tracklist: [{ position: '1', title: 'Test' }],
+    };
+
+    const output = buildTracksOutput('master', 12345, releaseInfo);
+
+    expect(output.result.tracks[0].duration).toBe('');
+  });
+
+  it('preserves track type_ field', () => {
+    const releaseInfo = {
+      ...sampleReleaseInfo,
+      tracklist: [{ position: '1', title: 'Test', type_: 'heading' }],
+    };
+
+    const output = buildTracksOutput('master', 12345, releaseInfo);
+
+    expect(output.result.tracks[0].type_).toBe('heading');
+  });
+
+  it('defaults type_ to track when missing', () => {
+    const releaseInfo = {
+      ...sampleReleaseInfo,
+      tracklist: [{ position: '1', title: 'Test' }],
+    };
+
+    const output = buildTracksOutput('master', 12345, releaseInfo);
+
+    expect(output.result.tracks[0].type_).toBe('track');
+  });
+
+  it('handles null year', () => {
+    const releaseInfo = { ...sampleReleaseInfo, year: null };
+
+    const output = buildTracksOutput('master', 12345, releaseInfo);
+
+    expect(output.result.year).toBeNull();
   });
 });
 
