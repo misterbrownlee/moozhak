@@ -1,6 +1,6 @@
 # Moozhak
 
-A Node.js CLI tool to search the Discogs music database. Interactive session-based interface with configurable search filters.
+A Node.js CLI tool to search the Discogs music database. Features both an interactive REPL session and non-interactive command mode.
 
 ## Requirements
 
@@ -12,25 +12,14 @@ A Node.js CLI tool to search the Discogs music database. Interactive session-bas
 ```bash
 # Clone the repo and install dependencies
 npm install
-```
 
-### Running the CLI
-
-```bash
-# Run directly with Node
-node cli.js
-
-# Or use npm start (if configured)
-npm start
-
-# Or link globally to use 'muzak' command anywhere
+# Link globally to use 'moozhak' command anywhere
 npm link
-muzak
 ```
 
 ## Setup
 
-Muzak requires a Discogs personal access token to access the API.
+Moozhak requires a Discogs personal access token to access the API.
 
 1. Get your token at: https://www.discogs.com/settings/developers
 2. Copy `data/example.mzkconfig` to `.mzkconfig` in the project root:
@@ -52,83 +41,78 @@ DISCOGS_TOKEN=your_token_here
 
 ## Usage
 
-Start an interactive session:
+### Interactive Mode (default)
+
+Start an interactive REPL session:
 
 ```bash
-$ muzak
+moozhak
+# or with explicit token
+moozhak --token your_token_here
 ```
 
-Or with a token:
+### Non-Interactive Mode
+
+Run commands directly from the shell:
 
 ```bash
-$ muzak --token your_token_here
+# Search
+moozhak search "Daft Punk"
+moozhak search "Bonobo" --type master --limit 10
+
+# Get tracks from a release
+moozhak tracks 27113
+moozhak tracks 249504 --type release --format csv
 ```
 
-### Interactive Session
-
-The CLI runs as an interactive REPL. The prompt shows the current search type:
-
-```
-🎵 Muzak CLI - Interactive Session
-───────────────────────────────────
-✓ Discogs token configured
-
-Type 'help' for available commands, 'exit' to quit.
-
-muzak [master]> search Daft Punk
-
-Searching Discogs for: "Daft Punk" (type: master)...
-
-Found 5 result(s):
-
-  [master] Daft Punk - Random Access Memories (2013) [88883716861]
-         https://www.discogs.com/master/456789
-
-muzak [master]> 
-```
-
-### Commands
+## Interactive Commands
 
 | Command | Description |
 |---------|-------------|
+| `search` | Show current search settings |
 | `search <query>` | Search Discogs with current filters |
-| `settings` | Show current session settings |
-| `set type <t>` | Set search type: `artist`, `release`, `master`, `label`, `none` |
-| `set per_page <n>` | Set results per page (default: 5) |
-| `set verbose on/off` | Toggle verbose HTTP output |
-| `set` | Show current settings |
+| `tracks <id>` | Get tracklist using current tracks_type setting |
+| `tracks <type> <id>` | Get tracklist (type: `master` or `release`) |
+| `settings` | Interactive settings menu |
+| `set <option> <value>` | Quick set an option |
 | `clean` | Delete dist/ folder |
 | `help` | Show help |
 | `exit` | Exit session |
 
-### Examples
+**Aliases:** `s` (search), `t` (tracks), `q`/`quit` (exit), `?`/`h` (help)
+
+### Settings Options
+
+| Option | Values | Description |
+|--------|--------|-------------|
+| `type` | `artist`, `release`, `master`, `label`, `none` | Search type filter |
+| `per_page` | number | Results per page (default: 5) |
+| `tracks_type` | `master`, `release` | Default source for tracks command |
+| `tracks_output` | `human`, `csv`, `pipe`, `markdown` | Tracks output format |
+| `verbose` | `on`, `off` | Echo HTTP requests/responses |
+
+### Example Session
 
 ```
-muzak [all]> set type master
-Search type: master
+↳ search Daft Punk
 
-muzak [master]> search "Pretty Lights"
+────────────────────────────────────────────────────
+ :: Starting search on Discogs for: "Daft Punk" ...
+ -> Found 5 result(s):
 ...
 
-muzak [master]> set per_page 10
-Results per page: 10
+↳ tracks 27113
 
-muzak [master]> set type artist
-Search type: artist
-
-muzak [artist]> search Bonobo
+────────────────────────────────────────────────────
+ :: Fetching master #27113 from Discogs...
+ -> Found: master #27113 - Daft Punk - Daft Club
 ...
 
-muzak [artist]> set type none
-Search type: none (all)
+↳ set type master
+ -> Search Type: master
 
-muzak [all]> settings
-
-Session Settings:
-───────────────────────────────────
-  type:      none (all)
-  per_page:  10
-  verbose:   off
+↳ settings
+  (interactive menu opens)
 ```
 
 ## Configuration
@@ -150,6 +134,12 @@ PER_PAGE=5
 
 # Optional: Default search type (default: none/all)
 DEFAULT_TYPE=master
+
+# Optional: Default tracks source (default: master)
+DEFAULT_TRACKS_TYPE=master
+
+# Optional: Default tracks output format (default: human)
+DEFAULT_TRACKS_OUTPUT=human
 ```
 
 ### Search Types
@@ -164,16 +154,19 @@ DEFAULT_TYPE=master
 
 ## Output
 
-Search results are saved to `dist/json/` as timestamped JSON files.
-
-Session logs are saved to `dist/logs/`.
+- Search results → `dist/json/search-*.json`
+- Tracks results → `dist/json/tracks-*.json`
+- Track listings → `dist/tracks/` (txt, csv, or md based on format)
+- Session logs → `dist/logs/`
 
 Use `clean` command or set `ALWAYS_CLEAN=true` to clear output files.
 
 ## Dependencies
 
+- [commander](https://github.com/tj/commander.js) - CLI framework
+- [@inquirer/prompts](https://github.com/SBoudrias/Inquirer.js) - Interactive prompts
 - [disconnect](https://github.com/bartve/disconnect) - Discogs API client
-- [meow](https://github.com/sindresorhus/meow) - CLI helper
+- [ansis](https://github.com/nicolo-ribaudo/ansis) - Terminal colors
 
 ## License
 

@@ -19,11 +19,14 @@ moozhak/
 │   ├── discogs.js              # API client: createClient(), searchDiscogs(), getMaster(), etc.
 │   ├── output.js               # JSON/tracks output: ensureDistDir(), writeJsonOutput()
 │   └── commands/
-│       ├── index.js            # Command registry, executeCommand(), parseInput()
-│       ├── settings.js         # Settings schema, handleSettings(), handleSet()
-│       ├── search.js           # handleSearch()
-│       ├── tracks.js           # handleTracks()
-│       └── clean.js            # handleClean()
+│       ├── index.js            # executeCommand(), parseInput(), re-exports
+│       ├── registry.js         # Command assembly: imports all commands, exports commands object
+│       ├── search.js           # searchCommand + handleSearch()
+│       ├── tracks.js           # tracksCommand + handleTracks()
+│       ├── settings.js         # settingsCommand, setCommand + handlers
+│       ├── clean.js            # cleanCommand + handleClean()
+│       ├── help.js             # helpCommand + showHelp()
+│       └── exit.js             # exitCommand
 ├── data/
 │   ├── example.mzkconfig       # Example config template
 │   ├── template.json           # JSON output template
@@ -100,18 +103,27 @@ sessionFlags = {
 
 ### Command Registry Pattern
 
-Commands are defined in `lib/commands/index.js`:
+Each command is self-contained in its own file (e.g., `lib/commands/search.js`):
 
 ```javascript
-const commands = {
-  search: {
-    aliases: ['s'],
-    minArgs: 1,
-    usage: 'search <query>',
-    handler: async (args, ctx) => { ... },
-  },
-  // ...
+export const searchCommand = {
+  name: 'search',
+  aliases: ['s'],
+  minArgs: 0,
+  usage: 'search <query>',
+  description: 'Search Discogs for releases or artists',
+  handler: async (args, ctx) => { ... },
 };
+```
+
+Commands are assembled in `lib/commands/registry.js`:
+
+```javascript
+import { searchCommand } from './search.js';
+// ... other imports
+
+const commandList = [searchCommand, tracksCommand, ...];
+const commands = Object.fromEntries(commandList.map(cmd => [cmd.name, cmd]));
 ```
 
 ### Settings Schema
