@@ -6,6 +6,7 @@ Node.js CLI tool for searching the Discogs music database. Features both an inte
 
 - **ES Modules** (`"type": "module"`)
 - **Dependencies:** `commander` (CLI parsing), `@inquirer/prompts` (interactive REPL), `disconnect` (Discogs API client), `ansis` (terminal colors)
+- **Dev Dependencies:** `jest` (testing)
 
 ## Project Structure
 
@@ -35,6 +36,10 @@ moozhak/
 │   ├── json/                   # Search/tracks results
 │   ├── logs/                   # Session logs
 │   └── tracks/                 # Track listings
+├── tests/
+│   ├── discogs.test.js         # Tests for formatTrack(), formatResult()
+│   └── data/                   # Test fixtures
+├── jest.config.js              # Jest configuration for ESM
 ├── .mzkconfig                  # Local config (gitignored)
 └── llm.md                      # This file (gitignored)
 ```
@@ -177,10 +182,39 @@ Using the `disconnect` library. Endpoints used:
 - `pipe` - Pipe-separated values  
 - `markdown` - Markdown table
 
+## Testing
+
+Using **Jest** with ES Modules support (`--experimental-vm-modules`).
+
+### Run Tests
+
+```bash
+npm test                # Run all tests
+npm run test:watch      # Watch mode
+npm run test:coverage   # With coverage report
+```
+
+### Test Files
+
+| File | Description |
+|------|-------------|
+| `tests/discogs.test.js` | Pure function tests: `formatTrack()`, `formatResult()` |
+
+### Testing Strategy
+
+**Pure functions** (no mocks needed):
+- `formatTrack(track, index, format)` - Formats track data for human/csv/pipe/markdown output
+- `formatResult(result)` - Formats search result for display
+
+**Functions requiring mocks** (for future expansion):
+- `runSearch()`, `runTracks()` - Mock `createClient`, `handleSearch`, `handleTracks`
+- `startSession()` - Complex REPL loop, better tested via integration tests
+
 ## TODO
 
 - [ ] Re-enable playlist command (CSV batch search)
 - [ ] `--open` flag to open results in browser
 - [ ] Additional Discogs endpoints (artist details, etc.)
-- [ ] Tests
+- [x] Tests (Jest setup with pure function tests)
 - [ ] Autocomplete for commands using `@inquirer/search`
+- [ ] Add tests for command handlers with mocks
