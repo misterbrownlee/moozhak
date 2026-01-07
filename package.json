@@ -11,7 +11,9 @@
   },
   "scripts": {
     "start": "node cli.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "NODE_OPTIONS='--experimental-vm-modules' jest --verbose",
+    "test:watch": "NODE_OPTIONS='--experimental-vm-modules' jest --watch --verbose",
+    "test:coverage": "NODE_OPTIONS='--experimental-vm-modules' jest --coverage --verbose"
   },
   "keywords": [
     "discogs",
@@ -26,5 +28,8 @@
     "ansis": "^4.2.0",
     "commander": "^13.0.0",
     "disconnect": "^1.2.2"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
   }
 }
