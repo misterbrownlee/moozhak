@@ -22,7 +22,7 @@ npm link
 Moozhak requires a Discogs personal access token to access the API.
 
 1. Get your token at: https://www.discogs.com/settings/developers
-2. Copy `data/example.mzkconfig` to `.mzkconfig` in the project root:
+2. Copy `example.mzkconfig` to `.mzkconfig` in the project root:
 
 ```bash
 cp data/example.mzkconfig .mzkconfig
