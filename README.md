@@ -25,7 +25,7 @@ Moozhak requires a Discogs personal access token to access the API.
 2. Copy `example.mzkconfig` to `.mzkconfig` in the project root:
 
 ```bash
-cp data/example.mzkconfig .mzkconfig
+cp example.mzkconfig .mzkconfig
 ```
 
 3. Add your token to `.mzkconfig`:
