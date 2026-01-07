@@ -34,6 +34,8 @@ jest.unstable_mockModule('../lib/discogs.js', () => ({
   getRelease: jest.fn().mockResolvedValue(null),
   formatResult: jest.fn((r) => `  ${r.id} | ${r.title}`),
   formatTrack: jest.fn((t, i) => `  ${i + 1} ${t.title}`),
+  buildDiscogsUrl: (type, id) => `https://www.discogs.com/${type}/${id}`,
+  buildDiscogsUrlFromUri: (uri) => `https://www.discogs.com${uri}`,
 }));
 
 // Mock output to avoid file system

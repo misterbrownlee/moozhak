@@ -288,11 +288,12 @@ export const SETTINGS_SCHEMA = {
 |--------|---------|
 | `config.js` | `fileConfig`, `loadConfig()`, `getPerPage()`, `getDefaultType()`, `getDefaultTracksType()`, `getDefaultTracksOutput()`, `isVerbose()`, `projectRoot` |
 | `logger.js` | `log` (styled console), `initLog()`, `writeLog()`, `logApiResponse()` |
-| `discogs.js` | `createClient()`, `searchDiscogs()`, `getMaster()`, `getRelease()`, `formatResult()`, `formatTrack()` |
+| `discogs.js` | `createClient()`, `searchDiscogs()`, `getMaster()`, `getRelease()`, `formatResult()`, `formatTrack()`, `buildDiscogsUrl()`, `buildDiscogsUrlFromUri()` |
 | `output.js` | `distDir`, `ensureDistDir()`, `writeJsonOutput()`, `writeTracksOutput()` |
 | `session.js` | `startSession()`, `runSearch()`, `runTracks()`, `createSessionFlags()` |
 | `commands/index.js` | `executeCommand()`, `parseInput()`, `findCommand()`, `getCommandNames()` |
-| `commands/tracks.js` | `tracksCommand`, `handleTracks()`, `parseTracksArgs()` |
+| `commands/search.js` | `searchCommand`, `handleSearch()`, `buildSearchOutput()` |
+| `commands/tracks.js` | `tracksCommand`, `handleTracks()`, `parseTracksArgs()`, `extractReleaseInfo()`, `buildTracksOutput()` |
 | `commands/settings.js` | `settingsCommand`, `setCommand`, `handleSet()`, `showSettings()`, `SETTINGS_SCHEMA` |
 
 ## Discogs API
@@ -342,16 +343,16 @@ npm run test:watch      # Watch mode
 npm run test:coverage   # With coverage report
 ```
 
-### Test Files (218 tests total)
+### Test Files (254 tests total)
 
 | File | Tests | Description |
 |------|-------|-------------|
 | `config.test.js` | 37 | Config getter validation (pure functions) |
-| `discogs.test.js` | 18 | `formatTrack()`, `formatResult()` |
+| `discogs.test.js` | 27 | `formatTrack()`, `formatResult()`, `buildDiscogsUrl()`, `buildDiscogsUrlFromUri()` |
 | `commands.test.js` | 63 | `parseInput`, `findCommand`, `parseTracksArgs`, `SETTINGS_SCHEMA` validators |
-| `search.test.js` | 14 | `handleSearch`, `searchCommand` (mocked API) |
-| `tracks.test.js` | 22 | `handleTracks`, `tracksCommand` (mocked API) |
-| `settings.test.js` | 59 | `handleSet`, `showSettings` (mocked logger) |
+| `search.test.js` | 24 | `handleSearch`, `searchCommand`, `buildSearchOutput` (mocked API + pure) |
+| `tracks.test.js` | 39 | `handleTracks`, `tracksCommand`, `extractReleaseInfo`, `buildTracksOutput` (mocked API + pure) |
+| `settings.test.js` | 37 | `handleSet`, `showSettings` (mocked logger) |
 | `cmdExecute.test.js` | 27 | `executeCommand` routing, aliases, error handling |
 
 ### Testing Strategy
@@ -359,6 +360,8 @@ npm run test:coverage   # With coverage report
 **Pure functions (no mocks):**
 - Config getters: `getPerPage()`, `getDefaultType()`, etc.
 - Formatters: `formatTrack()`, `formatResult()`
+- URL builders: `buildDiscogsUrl()`, `buildDiscogsUrlFromUri()`
+- Output builders: `buildSearchOutput()`, `buildTracksOutput()`, `extractReleaseInfo()`
 - Parsers: `parseInput()`, `parseTracksArgs()`
 - Validators: `SETTINGS_SCHEMA.*.validate/transform`
 - Registry: `findCommand()`, `getCommandNames()`

@@ -26,6 +26,7 @@ jest.unstable_mockModule('../lib/discogs.js', () => ({
     const pos = track.position || String(idx + 1);
     return format === 'csv' ? `${pos},${track.title},${track.duration || ''}` : `  ${pos} ${track.title}`;
   },
+  buildDiscogsUrl: (type, id) => `https://www.discogs.com/${type}/${id}`,
 }));
 
 jest.unstable_mockModule('../lib/output.js', () => ({
