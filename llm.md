@@ -1,5 +1,15 @@
 # Moozhak CLI - LLM Context
 
+> **LLM Instructions:** This file is the primary context for AI coding assistants working on this project. **Keep it updated** when making changes:
+> - Add new exports to the "Key Exports by Module" table
+> - Update test counts in the "Test Files" table after adding/removing tests
+> - Add new commands to the "Interactive Commands" table
+> - Update "Project Structure" if files are added/removed
+> - Mark TODO items as complete when finished
+> - Add new patterns or schemas to the "Architecture" section
+>
+> This ensures future sessions have accurate context.
+
 ## Overview
 
 Node.js CLI tool for searching the Discogs music database. Features both an interactive REPL session and non-interactive command mode.
