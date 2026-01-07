@@ -34,6 +34,8 @@ jest.unstable_mockModule('../lib/discogs.js', () => ({
   getRelease: jest.fn().mockResolvedValue(null),
   formatResult: jest.fn((r) => `  ${r.id} | ${r.title}`),
   formatTrack: jest.fn((t, i) => `  ${i + 1} ${t.title}`),
+  buildDiscogsUrl: (type, id) => `https://www.discogs.com/${type}/${id}`,
+  buildDiscogsUrlFromUri: (uri) => `https://www.discogs.com${uri}`,
 }));
 
 // Mock output to avoid file system
@@ -89,13 +91,17 @@ describe('executeCommand', () => {
     it('logs error for unknown command', async () => {
       await executeCommand('unknowncommand', ctx);
 
-      expect(mockLog.error).toHaveBeenCalledWith('Unknown command: unknowncommand');
+      expect(mockLog.error).toHaveBeenCalledWith(
+        'Unknown command: unknowncommand',
+      );
     });
 
     it('shows help hint for unknown command', async () => {
       await executeCommand('foo', ctx);
 
-      expect(mockLog.info).toHaveBeenCalledWith("Type 'help' for available commands.");
+      expect(mockLog.info).toHaveBeenCalledWith(
+        "Type 'help' for available commands.",
+      );
     });
 
     it('returns true to continue REPL', async () => {
@@ -126,7 +132,7 @@ describe('executeCommand', () => {
       await executeCommand('help', ctx);
 
       expect(mockLog.debug).toHaveBeenCalledWith(
-        expect.stringContaining('Command')
+        expect.stringContaining('Command'),
       );
     });
 
@@ -136,7 +142,7 @@ describe('executeCommand', () => {
       await executeCommand('help', ctx);
 
       expect(mockLog.debug).toHaveBeenCalledWith(
-        expect.stringContaining('Input: help')
+        expect.stringContaining('Input: help'),
       );
     });
 
@@ -256,9 +262,8 @@ describe('executeCommand', () => {
       await executeCommand('search', ctx);
 
       expect(mockLog.info).toHaveBeenCalledWith(
-        expect.stringContaining('Search Discogs')
+        expect.stringContaining('Search Discogs'),
       );
     });
   });
 });
-

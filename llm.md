@@ -1,5 +1,15 @@
 # Moozhak CLI - LLM Context
 
+> **LLM Instructions:** This file is the primary context for AI coding assistants working on this project. **Keep it updated** when making changes:
+> - Add new exports to the "Key Exports by Module" table
+> - Update test counts in the "Test Files" table after adding/removing tests
+> - Add new commands to the "Interactive Commands" table
+> - Update "Project Structure" if files are added/removed
+> - Mark TODO items as complete when finished
+> - Add new patterns or schemas to the "Architecture" section
+>
+> This ensures future sessions have accurate context.
+
 ## Overview
 
 Node.js CLI tool for searching the Discogs music database. Features both an interactive REPL session and non-interactive command mode.
@@ -7,7 +17,7 @@ Node.js CLI tool for searching the Discogs music database. Features both an inte
 - **ES Modules** (`"type": "module"`)
 - **Node.js:** v18+ (tested on v24)
 - **Dependencies:** `commander` (CLI parsing), `@inquirer/prompts` (interactive REPL), `disconnect` (Discogs API client), `ansis` (terminal colors)
-- **Dev Dependencies:** `jest@29` (testing with ESM support)
+- **Dev Dependencies:** `jest@29` (testing with ESM support), `@biomejs/biome` (linting & formatting)
 
 ## Coding Principles
 
@@ -168,6 +178,7 @@ moozhak/
 │   ├── logs/                   # Session logs
 │   └── tracks/                 # Track listings (txt/csv/md)
 ├── example.mzkconfig           # Example config template
+├── biome.json                  # Biome linter/formatter config
 ├── jest.config.js              # Jest ESM configuration
 ├── package.json
 ├── README.md
@@ -288,11 +299,12 @@ export const SETTINGS_SCHEMA = {
 |--------|---------|
 | `config.js` | `fileConfig`, `loadConfig()`, `getPerPage()`, `getDefaultType()`, `getDefaultTracksType()`, `getDefaultTracksOutput()`, `isVerbose()`, `projectRoot` |
 | `logger.js` | `log` (styled console), `initLog()`, `writeLog()`, `logApiResponse()` |
-| `discogs.js` | `createClient()`, `searchDiscogs()`, `getMaster()`, `getRelease()`, `formatResult()`, `formatTrack()` |
+| `discogs.js` | `createClient()`, `searchDiscogs()`, `getMaster()`, `getRelease()`, `formatResult()`, `formatTrack()`, `buildDiscogsUrl()`, `buildDiscogsUrlFromUri()` |
 | `output.js` | `distDir`, `ensureDistDir()`, `writeJsonOutput()`, `writeTracksOutput()` |
 | `session.js` | `startSession()`, `runSearch()`, `runTracks()`, `createSessionFlags()` |
 | `commands/index.js` | `executeCommand()`, `parseInput()`, `findCommand()`, `getCommandNames()` |
-| `commands/tracks.js` | `tracksCommand`, `handleTracks()`, `parseTracksArgs()` |
+| `commands/search.js` | `searchCommand`, `handleSearch()`, `buildSearchOutput()` |
+| `commands/tracks.js` | `tracksCommand`, `handleTracks()`, `parseTracksArgs()`, `extractReleaseInfo()`, `buildTracksOutput()` |
 | `commands/settings.js` | `settingsCommand`, `setCommand`, `handleSet()`, `showSettings()`, `SETTINGS_SCHEMA` |
 
 ## Discogs API
@@ -330,6 +342,33 @@ Using the `disconnect` library. Endpoints used:
 - `pipe` - Pipe-separated values (`.txt`)
 - `markdown` - Markdown table (`.md`)
 
+## Linting & Formatting
+
+Using **Biome** for linting and formatting (single tool, zero-config, fast).
+
+### Run Linter
+
+```bash
+npm run lint            # Check for lint/format issues
+npm run lint:fix        # Auto-fix lint issues
+npm run format          # Format all files
+```
+
+### Biome Configuration
+
+See `biome.json`:
+- **Indent:** 2 spaces
+- **Quotes:** Single quotes
+- **Semicolons:** Always
+- **Rules:** Recommended ruleset
+
+Key rules enforced:
+- `node:` protocol for Node.js imports (`node:fs`, `node:path`)
+- `Number.isNaN()` over global `isNaN()`
+- `===` over `==` (except null checks)
+- No unused variables/imports
+- Sorted imports
+
 ## Testing
 
 Using **Jest 29** with ES Modules support (`--experimental-vm-modules`).
@@ -342,16 +381,16 @@ npm run test:watch      # Watch mode
 npm run test:coverage   # With coverage report
 ```
 
-### Test Files (218 tests total)
+### Test Files (254 tests total)
 
 | File | Tests | Description |
 |------|-------|-------------|
 | `config.test.js` | 37 | Config getter validation (pure functions) |
-| `discogs.test.js` | 18 | `formatTrack()`, `formatResult()` |
+| `discogs.test.js` | 27 | `formatTrack()`, `formatResult()`, `buildDiscogsUrl()`, `buildDiscogsUrlFromUri()` |
 | `commands.test.js` | 63 | `parseInput`, `findCommand`, `parseTracksArgs`, `SETTINGS_SCHEMA` validators |
-| `search.test.js` | 14 | `handleSearch`, `searchCommand` (mocked API) |
-| `tracks.test.js` | 22 | `handleTracks`, `tracksCommand` (mocked API) |
-| `settings.test.js` | 59 | `handleSet`, `showSettings` (mocked logger) |
+| `search.test.js` | 24 | `handleSearch`, `searchCommand`, `buildSearchOutput` (mocked API + pure) |
+| `tracks.test.js` | 39 | `handleTracks`, `tracksCommand`, `extractReleaseInfo`, `buildTracksOutput` (mocked API + pure) |
+| `settings.test.js` | 37 | `handleSet`, `showSettings` (mocked logger) |
 | `cmdExecute.test.js` | 27 | `executeCommand` routing, aliases, error handling |
 
 ### Testing Strategy
@@ -359,6 +398,8 @@ npm run test:coverage   # With coverage report
 **Pure functions (no mocks):**
 - Config getters: `getPerPage()`, `getDefaultType()`, etc.
 - Formatters: `formatTrack()`, `formatResult()`
+- URL builders: `buildDiscogsUrl()`, `buildDiscogsUrlFromUri()`
+- Output builders: `buildSearchOutput()`, `buildTracksOutput()`, `extractReleaseInfo()`
 - Parsers: `parseInput()`, `parseTracksArgs()`
 - Validators: `SETTINGS_SCHEMA.*.validate/transform`
 - Registry: `findCommand()`, `getCommandNames()`

@@ -19,6 +19,7 @@ const mockLog = {
 jest.unstable_mockModule('../lib/discogs.js', () => ({
   searchDiscogs: mockSearchDiscogs,
   formatResult: (result) => `  ${result.id} | ${result.title}`,
+  buildDiscogsUrlFromUri: (uri) => `https://www.discogs.com${uri}`,
 }));
 
 jest.unstable_mockModule('../lib/output.js', () => ({
@@ -30,7 +31,9 @@ jest.unstable_mockModule('../lib/logger.js', () => ({
 }));
 
 // Import after mocking
-const { handleSearch, searchCommand } = await import('../lib/commands/search.js');
+const { handleSearch, searchCommand, buildSearchOutput } = await import(
+  '../lib/commands/search.js'
+);
 
 describe('handleSearch', () => {
   beforeEach(() => {
@@ -55,7 +58,7 @@ describe('handleSearch', () => {
       'Daft Punk',
       null,
       5,
-      false
+      false,
     );
   });
 
@@ -70,7 +73,7 @@ describe('handleSearch', () => {
       'Bonobo',
       'master',
       5,
-      false
+      false,
     );
   });
 
@@ -85,7 +88,7 @@ describe('handleSearch', () => {
       'Tycho',
       null,
       10,
-      false
+      false,
     );
   });
 
@@ -100,13 +103,19 @@ describe('handleSearch', () => {
       'Boards of Canada',
       null,
       5,
-      true
+      true,
     );
   });
 
   it('writes JSON output when results are found', async () => {
     const mockResults = [
-      { id: 123, title: 'Discovery - Daft Punk', type: 'master', year: 2001, uri: '/master/123' },
+      {
+        id: 123,
+        title: 'Discovery - Daft Punk',
+        type: 'master',
+        year: 2001,
+        uri: '/master/123',
+      },
     ];
     mockSearchDiscogs.mockResolvedValue(mockResults);
 
@@ -133,7 +142,7 @@ describe('handleSearch', () => {
             }),
           ]),
         }),
-      })
+      }),
     );
   });
 
@@ -202,7 +211,9 @@ describe('searchCommand', () => {
     const result = await searchCommand.handler([], ctx);
 
     expect(result).toBe(true);
-    expect(mockLog.info).toHaveBeenCalledWith(expect.stringContaining('Search Discogs'));
+    expect(mockLog.info).toHaveBeenCalledWith(
+      expect.stringContaining('Search Discogs'),
+    );
     expect(mockSearchDiscogs).not.toHaveBeenCalled();
   });
 
@@ -221,7 +232,7 @@ describe('searchCommand', () => {
       'Daft Punk',
       null,
       5,
-      false
+      false,
     );
   });
 
@@ -239,7 +250,7 @@ describe('searchCommand', () => {
       'Boards of Canada',
       'master',
       10,
-      true
+      true,
     );
   });
 
@@ -256,3 +267,145 @@ describe('searchCommand', () => {
   });
 });
 
+describe('buildSearchOutput (pure function)', () => {
+  it('builds correct output structure', () => {
+    const results = [
+      {
+        id: 123,
+        title: 'Discovery - Daft Punk',
+        type: 'master',
+        year: 2001,
+        uri: '/master/123',
+      },
+    ];
+
+    const output = buildSearchOutput('Daft Punk', 'master', 5, results);
+
+    expect(output).toEqual({
+      type: 'search',
+      params: {
+        query: 'Daft Punk',
+        searchType: 'master',
+        per_page: 5,
+      },
+      result: {
+        tracks: [
+          {
+            title: 'Discovery - Daft Punk',
+            artist: 'Discovery',
+            album: '',
+            isrc: '',
+            match: {
+              type: 'master',
+              year: 2001,
+              url: 'https://www.discogs.com/master/123',
+              id: 123,
+            },
+          },
+        ],
+      },
+    });
+  });
+
+  it('handles null type filter', () => {
+    const output = buildSearchOutput('query', null, 10, []);
+
+    expect(output.params.searchType).toBeNull();
+    expect(output.params.per_page).toBe(10);
+  });
+
+  it('handles empty results array', () => {
+    const output = buildSearchOutput('test', null, 5, []);
+
+    expect(output.result.tracks).toEqual([]);
+  });
+
+  it('extracts artist from title before dash', () => {
+    const results = [
+      { id: 1, title: 'Bonobo - Black Sands', uri: '/master/1' },
+    ];
+
+    const output = buildSearchOutput('test', null, 5, results);
+
+    expect(output.result.tracks[0].artist).toBe('Bonobo');
+  });
+
+  it('handles title without dash', () => {
+    const results = [{ id: 1, title: 'Single Word Title', uri: '/master/1' }];
+
+    const output = buildSearchOutput('test', null, 5, results);
+
+    expect(output.result.tracks[0].artist).toBe('Single Word Title');
+    expect(output.result.tracks[0].title).toBe('Single Word Title');
+  });
+
+  it('handles missing title gracefully', () => {
+    const results = [{ id: 1, uri: '/master/1' }];
+
+    const output = buildSearchOutput('test', null, 5, results);
+
+    expect(output.result.tracks[0].title).toBe('');
+    expect(output.result.tracks[0].artist).toBe('');
+  });
+
+  it('handles missing year', () => {
+    const results = [
+      { id: 1, title: 'Test', type: 'release', uri: '/release/1' },
+    ];
+
+    const output = buildSearchOutput('test', null, 5, results);
+
+    expect(output.result.tracks[0].match.year).toBeNull();
+  });
+
+  it('handles missing type with default', () => {
+    const results = [{ id: 1, title: 'Test', uri: '/unknown/1' }];
+
+    const output = buildSearchOutput('test', null, 5, results);
+
+    expect(output.result.tracks[0].match.type).toBe('unknown');
+  });
+
+  it('builds correct URL from URI', () => {
+    const results = [{ id: 456, title: 'Test', uri: '/release/456' }];
+
+    const output = buildSearchOutput('test', null, 5, results);
+
+    expect(output.result.tracks[0].match.url).toBe(
+      'https://www.discogs.com/release/456',
+    );
+  });
+
+  it('handles multiple results', () => {
+    const results = [
+      {
+        id: 1,
+        title: 'First - Artist',
+        type: 'master',
+        year: 2020,
+        uri: '/master/1',
+      },
+      {
+        id: 2,
+        title: 'Second - Artist',
+        type: 'release',
+        year: 2021,
+        uri: '/release/2',
+      },
+      {
+        id: 3,
+        title: 'Third - Artist',
+        type: 'master',
+        year: 2022,
+        uri: '/master/3',
+      },
+    ];
+
+    const output = buildSearchOutput('artist', 'master', 10, results);
+
+    expect(output.result.tracks).toHaveLength(3);
+    expect(output.result.tracks[0].match.id).toBe(1);
+    expect(output.result.tracks[1].match.id).toBe(2);
+    expect(output.result.tracks[2].match.id).toBe(3);
+  });
+});

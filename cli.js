@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { program } from 'commander';
-import { startSession, runSearch, runTracks } from './lib/session.js';
+import { runSearch, runTracks, startSession } from './lib/session.js';
 
 program
   .name('moozhak')
@@ -30,7 +30,11 @@ program
   .command('tracks <id>')
   .description('Get tracklist from a master or release (non-interactive)')
   .option('--type <type>', 'Source type: master or release', 'master')
-  .option('--format <fmt>', 'Output format: human, csv, pipe, markdown', 'human')
+  .option(
+    '--format <fmt>',
+    'Output format: human, csv, pipe, markdown',
+    'human',
+  )
   .option('-v, --verbose', 'Show verbose output')
   .action(async (id, options, cmd) => {
     const globalOpts = cmd.parent.opts();

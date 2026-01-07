@@ -12,4 +12,3 @@ export default {
   // Suppress experimental ESM warning
   silent: false,
 };
-
