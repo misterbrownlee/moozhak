@@ -161,6 +161,16 @@ DEFAULT_TRACKS_OUTPUT=human
 
 Use `clean` command or set `ALWAYS_CLEAN=true` to clear output files.
 
+## Development
+
+```bash
+npm test              # Run tests
+npm run test:watch    # Watch mode
+npm run test:coverage # Coverage report
+```
+
+For coding principles, architecture documentation, and contribution guidelines, see **[llm.md](./llm.md)**.
+
 ## Dependencies
 
 - [commander](https://github.com/tj/commander.js) - CLI framework
