@@ -24,7 +24,9 @@ jest.unstable_mockModule('../lib/discogs.js', () => ({
   getRelease: mockGetRelease,
   formatTrack: (track, idx, format) => {
     const pos = track.position || String(idx + 1);
-    return format === 'csv' ? `${pos},${track.title},${track.duration || ''}` : `  ${pos} ${track.title}`;
+    return format === 'csv'
+      ? `${pos},${track.title},${track.duration || ''}`
+      : `  ${pos} ${track.title}`;
   },
   buildDiscogsUrl: (type, id) => `https://www.discogs.com/${type}/${id}`,
 }));
@@ -39,7 +41,8 @@ jest.unstable_mockModule('../lib/logger.js', () => ({
 }));
 
 // Import after mocking
-const { handleTracks, tracksCommand, buildTracksOutput, extractReleaseInfo } = await import('../lib/commands/tracks.js');
+const { handleTracks, tracksCommand, buildTracksOutput, extractReleaseInfo } =
+  await import('../lib/commands/tracks.js');
 
 describe('handleTracks', () => {
   beforeEach(() => {
@@ -115,7 +118,9 @@ describe('handleTracks', () => {
     it('logs error for invalid ID', async () => {
       await handleTracks(mockDb, 'master', 'not-a-number', defaultFlags);
 
-      expect(mockLog.error).toHaveBeenCalledWith('Invalid ID. Please provide a numeric ID.');
+      expect(mockLog.error).toHaveBeenCalledWith(
+        'Invalid ID. Please provide a numeric ID.',
+      );
       expect(mockGetMaster).not.toHaveBeenCalled();
     });
 
@@ -124,7 +129,9 @@ describe('handleTracks', () => {
 
       await handleTracks(mockDb, 'master', '12345', defaultFlags);
 
-      expect(mockLog.warn).toHaveBeenCalledWith('Could not fetch master #12345.');
+      expect(mockLog.warn).toHaveBeenCalledWith(
+        'Could not fetch master #12345.',
+      );
     });
 
     it('logs warning for empty tracklist', async () => {
@@ -159,7 +166,7 @@ describe('handleTracks', () => {
               expect.objectContaining({ position: '2', title: 'Kiara' }),
             ]),
           }),
-        })
+        }),
       );
     });
 
@@ -173,7 +180,7 @@ describe('handleTracks', () => {
         12345,
         'human',
         'Bonobo',
-        'Black Sands'
+        'Black Sands',
       );
     });
 
@@ -187,7 +194,7 @@ describe('handleTracks', () => {
           result: expect.objectContaining({
             url: 'https://www.discogs.com/release/67890',
           }),
-        })
+        }),
       );
     });
 
@@ -197,7 +204,7 @@ describe('handleTracks', () => {
       await handleTracks(mockDb, 'master', '12345', defaultFlags);
 
       expect(mockLog.success).toHaveBeenCalledWith(
-        'Found: master #12345 - Bonobo - Black Sands (2010)'
+        'Found: master #12345 - Bonobo - Black Sands (2010)',
       );
     });
 
@@ -207,7 +214,7 @@ describe('handleTracks', () => {
       await handleTracks(mockDb, 'master', '12345', defaultFlags);
 
       expect(mockLog.success).toHaveBeenCalledWith(
-        'Found: master #12345 - Bonobo - Black Sands'
+        'Found: master #12345 - Bonobo - Black Sands',
       );
     });
   });
@@ -216,7 +223,10 @@ describe('handleTracks', () => {
     it('uses human format by default', async () => {
       mockGetMaster.mockResolvedValue(mockMasterData);
 
-      await handleTracks(mockDb, 'master', '12345', { tracks_output: 'human', verbose: false });
+      await handleTracks(mockDb, 'master', '12345', {
+        tracks_output: 'human',
+        verbose: false,
+      });
 
       expect(mockLog.header).toHaveBeenCalledWith('Tracklist (2 tracks):\n');
     });
@@ -224,7 +234,10 @@ describe('handleTracks', () => {
     it('outputs CSV header for csv format', async () => {
       mockGetMaster.mockResolvedValue(mockMasterData);
 
-      await handleTracks(mockDb, 'master', '12345', { tracks_output: 'csv', verbose: false });
+      await handleTracks(mockDb, 'master', '12345', {
+        tracks_output: 'csv',
+        verbose: false,
+      });
 
       expect(mockLog.plain).toHaveBeenCalledWith('position,title,duration');
     });
@@ -232,23 +245,33 @@ describe('handleTracks', () => {
     it('outputs markdown headers for markdown format', async () => {
       mockGetMaster.mockResolvedValue(mockMasterData);
 
-      await handleTracks(mockDb, 'master', '12345', { tracks_output: 'markdown', verbose: false });
+      await handleTracks(mockDb, 'master', '12345', {
+        tracks_output: 'markdown',
+        verbose: false,
+      });
 
-      expect(mockLog.plain).toHaveBeenCalledWith('| Position | Title | Duration |');
-      expect(mockLog.plain).toHaveBeenCalledWith('|----------|-------|----------|');
+      expect(mockLog.plain).toHaveBeenCalledWith(
+        '| Position | Title | Duration |',
+      );
+      expect(mockLog.plain).toHaveBeenCalledWith(
+        '|----------|-------|----------|',
+      );
     });
 
     it('passes format to writeTracksOutput', async () => {
       mockGetMaster.mockResolvedValue(mockMasterData);
 
-      await handleTracks(mockDb, 'master', '12345', { tracks_output: 'csv', verbose: false });
+      await handleTracks(mockDb, 'master', '12345', {
+        tracks_output: 'csv',
+        verbose: false,
+      });
 
       expect(mockWriteTracksOutput).toHaveBeenCalledWith(
         expect.any(String),
         12345,
         'csv',
         'Bonobo',
-        'Black Sands'
+        'Black Sands',
       );
     });
   });
@@ -275,7 +298,11 @@ describe('tracksCommand', () => {
 
     const ctx = {
       db: {},
-      sessionFlags: { tracks_type: 'master', tracks_output: 'human', verbose: false },
+      sessionFlags: {
+        tracks_type: 'master',
+        tracks_output: 'human',
+        verbose: false,
+      },
     };
 
     await tracksCommand.handler(['12345'], ctx);
@@ -292,7 +319,11 @@ describe('tracksCommand', () => {
 
     const ctx = {
       db: {},
-      sessionFlags: { tracks_type: 'release', tracks_output: 'human', verbose: false },
+      sessionFlags: {
+        tracks_type: 'release',
+        tracks_output: 'human',
+        verbose: false,
+      },
     };
 
     await tracksCommand.handler(['12345'], ctx);
@@ -310,7 +341,11 @@ describe('tracksCommand', () => {
 
     const ctx = {
       db: {},
-      sessionFlags: { tracks_type: 'master', tracks_output: 'human', verbose: false },
+      sessionFlags: {
+        tracks_type: 'master',
+        tracks_output: 'human',
+        verbose: false,
+      },
     };
 
     await tracksCommand.handler(['release', '12345'], ctx);
@@ -324,7 +359,11 @@ describe('tracksCommand', () => {
 
     const ctx = {
       db: {},
-      sessionFlags: { tracks_type: 'master', tracks_output: 'human', verbose: false },
+      sessionFlags: {
+        tracks_type: 'master',
+        tracks_output: 'human',
+        verbose: false,
+      },
     };
 
     const result = await tracksCommand.handler(['12345'], ctx);
@@ -335,7 +374,11 @@ describe('tracksCommand', () => {
   it('handles invalid type error', async () => {
     const ctx = {
       db: {},
-      sessionFlags: { tracks_type: 'master', tracks_output: 'human', verbose: false },
+      sessionFlags: {
+        tracks_type: 'master',
+        tracks_output: 'human',
+        verbose: false,
+      },
     };
 
     const result = await tracksCommand.handler(['artist', '12345'], ctx);
@@ -369,7 +412,11 @@ describe('extractReleaseInfo (pure function)', () => {
   it('joins multiple artists with comma', () => {
     const data = {
       title: 'Test',
-      artists: [{ name: 'Artist 1' }, { name: 'Artist 2' }, { name: 'Artist 3' }],
+      artists: [
+        { name: 'Artist 1' },
+        { name: 'Artist 2' },
+        { name: 'Artist 3' },
+      ],
       tracklist: [],
     };
 
@@ -395,7 +442,11 @@ describe('extractReleaseInfo (pure function)', () => {
   });
 
   it('handles missing year', () => {
-    const data = { title: 'Test', artists: [{ name: 'Artist' }], tracklist: [] };
+    const data = {
+      title: 'Test',
+      artists: [{ name: 'Artist' }],
+      tracklist: [],
+    };
 
     const info = extractReleaseInfo(data, 'master', 1);
 
@@ -462,7 +513,10 @@ describe('buildTracksOutput (pure function)', () => {
   });
 
   it('sets correct sourceType for release', () => {
-    const releaseInfo = { ...sampleReleaseInfo, url: 'https://www.discogs.com/release/67890' };
+    const releaseInfo = {
+      ...sampleReleaseInfo,
+      url: 'https://www.discogs.com/release/67890',
+    };
 
     const output = buildTracksOutput('release', 67890, releaseInfo);
 
@@ -481,10 +535,7 @@ describe('buildTracksOutput (pure function)', () => {
   it('uses index+1 as position when missing', () => {
     const releaseInfo = {
       ...sampleReleaseInfo,
-      tracklist: [
-        { title: 'Track One' },
-        { title: 'Track Two' },
-      ],
+      tracklist: [{ title: 'Track One' }, { title: 'Track Two' }],
     };
 
     const output = buildTracksOutput('master', 12345, releaseInfo);
@@ -545,4 +596,3 @@ describe('buildTracksOutput (pure function)', () => {
     expect(output.result.year).toBeNull();
   });
 });
-

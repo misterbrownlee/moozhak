@@ -2,9 +2,13 @@
  * Tests for pure functions in command modules
  * No mocks required - these are pure data transformations
  */
-import { parseInput, findCommand, getCommandNames } from '../lib/commands/index.js';
-import { parseTracksArgs } from '../lib/commands/tracks.js';
+import {
+  findCommand,
+  getCommandNames,
+  parseInput,
+} from '../lib/commands/index.js';
 import { SETTINGS_SCHEMA } from '../lib/commands/settings.js';
+import { parseTracksArgs } from '../lib/commands/tracks.js';
 
 describe('parseInput', () => {
   it('parses simple command with no args', () => {
@@ -29,7 +33,10 @@ describe('parseInput', () => {
 
   it('handles mixed quoted and unquoted args', () => {
     const result = parseInput('search "Daft Punk" --type master');
-    expect(result).toEqual({ command: 'search', args: ['Daft Punk', '--type', 'master'] });
+    expect(result).toEqual({
+      command: 'search',
+      args: ['Daft Punk', '--type', 'master'],
+    });
   });
 
   it('normalizes command to lowercase', () => {
@@ -54,12 +61,18 @@ describe('parseInput', () => {
 
   it('handles multi-word search query without quotes', () => {
     const result = parseInput('search Daft Punk Discovery');
-    expect(result).toEqual({ command: 'search', args: ['Daft', 'Punk', 'Discovery'] });
+    expect(result).toEqual({
+      command: 'search',
+      args: ['Daft', 'Punk', 'Discovery'],
+    });
   });
 
   it('preserves content inside quotes', () => {
     const result = parseInput('search "Artist - Album (2020)"');
-    expect(result).toEqual({ command: 'search', args: ['Artist - Album (2020)'] });
+    expect(result).toEqual({
+      command: 'search',
+      args: ['Artist - Album (2020)'],
+    });
   });
 });
 
@@ -366,4 +379,3 @@ describe('SETTINGS_SCHEMA validators', () => {
     });
   });
 });
-

@@ -91,13 +91,17 @@ describe('executeCommand', () => {
     it('logs error for unknown command', async () => {
       await executeCommand('unknowncommand', ctx);
 
-      expect(mockLog.error).toHaveBeenCalledWith('Unknown command: unknowncommand');
+      expect(mockLog.error).toHaveBeenCalledWith(
+        'Unknown command: unknowncommand',
+      );
     });
 
     it('shows help hint for unknown command', async () => {
       await executeCommand('foo', ctx);
 
-      expect(mockLog.info).toHaveBeenCalledWith("Type 'help' for available commands.");
+      expect(mockLog.info).toHaveBeenCalledWith(
+        "Type 'help' for available commands.",
+      );
     });
 
     it('returns true to continue REPL', async () => {
@@ -128,7 +132,7 @@ describe('executeCommand', () => {
       await executeCommand('help', ctx);
 
       expect(mockLog.debug).toHaveBeenCalledWith(
-        expect.stringContaining('Command')
+        expect.stringContaining('Command'),
       );
     });
 
@@ -138,7 +142,7 @@ describe('executeCommand', () => {
       await executeCommand('help', ctx);
 
       expect(mockLog.debug).toHaveBeenCalledWith(
-        expect.stringContaining('Input: help')
+        expect.stringContaining('Input: help'),
       );
     });
 
@@ -258,9 +262,8 @@ describe('executeCommand', () => {
       await executeCommand('search', ctx);
 
       expect(mockLog.info).toHaveBeenCalledWith(
-        expect.stringContaining('Search Discogs')
+        expect.stringContaining('Search Discogs'),
       );
     });
   });
 });
-

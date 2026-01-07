@@ -17,7 +17,7 @@ Node.js CLI tool for searching the Discogs music database. Features both an inte
 - **ES Modules** (`"type": "module"`)
 - **Node.js:** v18+ (tested on v24)
 - **Dependencies:** `commander` (CLI parsing), `@inquirer/prompts` (interactive REPL), `disconnect` (Discogs API client), `ansis` (terminal colors)
-- **Dev Dependencies:** `jest@29` (testing with ESM support)
+- **Dev Dependencies:** `jest@29` (testing with ESM support), `@biomejs/biome` (linting & formatting)
 
 ## Coding Principles
 
@@ -178,6 +178,7 @@ moozhak/
 │   ├── logs/                   # Session logs
 │   └── tracks/                 # Track listings (txt/csv/md)
 ├── example.mzkconfig           # Example config template
+├── biome.json                  # Biome linter/formatter config
 ├── jest.config.js              # Jest ESM configuration
 ├── package.json
 ├── README.md
@@ -340,6 +341,33 @@ Using the `disconnect` library. Endpoints used:
 - `csv` - Comma-separated values (`.csv`)
 - `pipe` - Pipe-separated values (`.txt`)
 - `markdown` - Markdown table (`.md`)
+
+## Linting & Formatting
+
+Using **Biome** for linting and formatting (single tool, zero-config, fast).
+
+### Run Linter
+
+```bash
+npm run lint            # Check for lint/format issues
+npm run lint:fix        # Auto-fix lint issues
+npm run format          # Format all files
+```
+
+### Biome Configuration
+
+See `biome.json`:
+- **Indent:** 2 spaces
+- **Quotes:** Single quotes
+- **Semicolons:** Always
+- **Rules:** Recommended ruleset
+
+Key rules enforced:
+- `node:` protocol for Node.js imports (`node:fs`, `node:path`)
+- `Number.isNaN()` over global `isNaN()`
+- `===` over `==` (except null checks)
+- No unused variables/imports
+- Sorted imports
 
 ## Testing
 

@@ -2,7 +2,12 @@
  * Tests for pure functions in discogs.js
  * No mocks required - these are pure data transformations
  */
-import { formatTrack, formatResult, buildDiscogsUrl, buildDiscogsUrlFromUri } from '../lib/discogs.js';
+import {
+  buildDiscogsUrl,
+  buildDiscogsUrlFromUri,
+  formatResult,
+  formatTrack,
+} from '../lib/discogs.js';
 
 describe('formatTrack', () => {
   const sampleTrack = {
@@ -98,7 +103,9 @@ describe('formatResult', () => {
       catno: 'ZEN195',
     };
     const formatted = formatResult(result);
-    expect(formatted).toBe('  12345 | Black Sands - Bonobo | 2010 | Vinyl, LP | ZEN195');
+    expect(formatted).toBe(
+      '  12345 | Black Sands - Bonobo | 2010 | Vinyl, LP | ZEN195',
+    );
   });
 
   it('omits missing fields from output', () => {
@@ -141,41 +148,59 @@ describe('formatResult', () => {
 
 describe('buildDiscogsUrl', () => {
   it('builds URL for master type', () => {
-    expect(buildDiscogsUrl('master', 12345)).toBe('https://www.discogs.com/master/12345');
+    expect(buildDiscogsUrl('master', 12345)).toBe(
+      'https://www.discogs.com/master/12345',
+    );
   });
 
   it('builds URL for release type', () => {
-    expect(buildDiscogsUrl('release', 67890)).toBe('https://www.discogs.com/release/67890');
+    expect(buildDiscogsUrl('release', 67890)).toBe(
+      'https://www.discogs.com/release/67890',
+    );
   });
 
   it('builds URL for artist type', () => {
-    expect(buildDiscogsUrl('artist', 111)).toBe('https://www.discogs.com/artist/111');
+    expect(buildDiscogsUrl('artist', 111)).toBe(
+      'https://www.discogs.com/artist/111',
+    );
   });
 
   it('builds URL for label type', () => {
-    expect(buildDiscogsUrl('label', 222)).toBe('https://www.discogs.com/label/222');
+    expect(buildDiscogsUrl('label', 222)).toBe(
+      'https://www.discogs.com/label/222',
+    );
   });
 
   it('handles string ID', () => {
-    expect(buildDiscogsUrl('master', '99999')).toBe('https://www.discogs.com/master/99999');
+    expect(buildDiscogsUrl('master', '99999')).toBe(
+      'https://www.discogs.com/master/99999',
+    );
   });
 });
 
 describe('buildDiscogsUrlFromUri', () => {
   it('builds URL from master URI', () => {
-    expect(buildDiscogsUrlFromUri('/master/12345')).toBe('https://www.discogs.com/master/12345');
+    expect(buildDiscogsUrlFromUri('/master/12345')).toBe(
+      'https://www.discogs.com/master/12345',
+    );
   });
 
   it('builds URL from release URI', () => {
-    expect(buildDiscogsUrlFromUri('/release/67890')).toBe('https://www.discogs.com/release/67890');
+    expect(buildDiscogsUrlFromUri('/release/67890')).toBe(
+      'https://www.discogs.com/release/67890',
+    );
   });
 
   it('builds URL from complex URI path', () => {
-    expect(buildDiscogsUrlFromUri('/artist/123-Artist-Name')).toBe('https://www.discogs.com/artist/123-Artist-Name');
+    expect(buildDiscogsUrlFromUri('/artist/123-Artist-Name')).toBe(
+      'https://www.discogs.com/artist/123-Artist-Name',
+    );
   });
 
   it('handles URI without leading slash', () => {
     // Note: This tests current behavior, but URIs should have leading slash
-    expect(buildDiscogsUrlFromUri('master/123')).toBe('https://www.discogs.commaster/123');
+    expect(buildDiscogsUrlFromUri('master/123')).toBe(
+      'https://www.discogs.commaster/123',
+    );
   });
 });

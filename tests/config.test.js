@@ -4,10 +4,10 @@
  */
 import {
   fileConfig,
-  getPerPage,
-  getDefaultType,
-  getDefaultTracksType,
   getDefaultTracksOutput,
+  getDefaultTracksType,
+  getDefaultType,
+  getPerPage,
 } from '../lib/config.js';
 
 // Helper to save and restore fileConfig state between tests
@@ -15,7 +15,9 @@ const originalConfig = { ...fileConfig };
 
 afterEach(() => {
   // Restore original config after each test
-  Object.keys(fileConfig).forEach((key) => delete fileConfig[key]);
+  for (const key of Object.keys(fileConfig)) {
+    delete fileConfig[key];
+  }
   Object.assign(fileConfig, originalConfig);
 });
 
@@ -223,4 +225,3 @@ describe('getDefaultTracksOutput', () => {
     expect(getDefaultTracksOutput()).toBe('human');
   });
 });
-

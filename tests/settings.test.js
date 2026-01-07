@@ -22,7 +22,7 @@ jest.unstable_mockModule('../lib/logger.js', () => ({
 }));
 
 // Import after mocking
-const { handleSet, showSettings, SETTINGS_SCHEMA } = await import('../lib/commands/settings.js');
+const { handleSet, showSettings } = await import('../lib/commands/settings.js');
 
 describe('handleSet', () => {
   let sessionFlags;
@@ -240,7 +240,7 @@ describe('handleSet', () => {
 
       expect(mockLog.error).toHaveBeenCalledWith('Unknown option: unknown');
       expect(mockLog.info).toHaveBeenCalledWith(
-        expect.stringContaining('Available options:')
+        expect.stringContaining('Available options:'),
       );
     });
 
@@ -248,13 +248,17 @@ describe('handleSet', () => {
       handleSet(['type'], sessionFlags, mockUpdatePrompt);
 
       expect(mockLog.error).toHaveBeenCalledWith('Missing value for type');
-      expect(mockLog.info).toHaveBeenCalledWith(expect.stringContaining('Current:'));
+      expect(mockLog.info).toHaveBeenCalledWith(
+        expect.stringContaining('Current:'),
+      );
     });
 
     it('shows available options when value missing for choice-based setting', () => {
       handleSet(['type'], sessionFlags, mockUpdatePrompt);
 
-      expect(mockLog.info).toHaveBeenCalledWith(expect.stringContaining('Options:'));
+      expect(mockLog.info).toHaveBeenCalledWith(
+        expect.stringContaining('Options:'),
+      );
     });
   });
 
@@ -263,7 +267,7 @@ describe('handleSet', () => {
       handleSet(['type', 'master'], sessionFlags, mockUpdatePrompt);
 
       expect(mockWriteLog).toHaveBeenCalledWith(
-        expect.stringContaining('Settings updated:')
+        expect.stringContaining('Settings updated:'),
       );
     });
 
@@ -306,13 +310,29 @@ describe('showSettings', () => {
     showSettings(sessionFlags);
 
     // Check that plain was called for each setting (plus one empty line)
-    const plainCalls = mockLog.plain.mock.calls.map(call => call[0]);
-    
-    expect(plainCalls.some(c => c.includes('Search Type') && c.includes('master'))).toBe(true);
-    expect(plainCalls.some(c => c.includes('Results Per Page') && c.includes('10'))).toBe(true);
-    expect(plainCalls.some(c => c.includes('Default Tracks Type') && c.includes('release'))).toBe(true);
-    expect(plainCalls.some(c => c.includes('Tracks Output Format') && c.includes('csv'))).toBe(true);
-    expect(plainCalls.some(c => c.includes('Verbose Mode') && c.includes('on'))).toBe(true);
+    const plainCalls = mockLog.plain.mock.calls.map((call) => call[0]);
+
+    expect(
+      plainCalls.some((c) => c.includes('Search Type') && c.includes('master')),
+    ).toBe(true);
+    expect(
+      plainCalls.some(
+        (c) => c.includes('Results Per Page') && c.includes('10'),
+      ),
+    ).toBe(true);
+    expect(
+      plainCalls.some(
+        (c) => c.includes('Default Tracks Type') && c.includes('release'),
+      ),
+    ).toBe(true);
+    expect(
+      plainCalls.some(
+        (c) => c.includes('Tracks Output Format') && c.includes('csv'),
+      ),
+    ).toBe(true);
+    expect(
+      plainCalls.some((c) => c.includes('Verbose Mode') && c.includes('on')),
+    ).toBe(true);
   });
 
   it('displays "none (all)" for null type', () => {
@@ -326,8 +346,8 @@ describe('showSettings', () => {
 
     showSettings(sessionFlags);
 
-    const plainCalls = mockLog.plain.mock.calls.map(call => call[0]);
-    expect(plainCalls.some(c => c.includes('none (all)'))).toBe(true);
+    const plainCalls = mockLog.plain.mock.calls.map((call) => call[0]);
+    expect(plainCalls.some((c) => c.includes('none (all)'))).toBe(true);
   });
 
   it('displays "off" for verbose false', () => {
@@ -341,8 +361,9 @@ describe('showSettings', () => {
 
     showSettings(sessionFlags);
 
-    const plainCalls = mockLog.plain.mock.calls.map(call => call[0]);
-    expect(plainCalls.some(c => c.includes('Verbose Mode') && c.includes('off'))).toBe(true);
+    const plainCalls = mockLog.plain.mock.calls.map((call) => call[0]);
+    expect(
+      plainCalls.some((c) => c.includes('Verbose Mode') && c.includes('off')),
+    ).toBe(true);
   });
 });
-
