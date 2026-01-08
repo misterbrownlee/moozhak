@@ -24,3 +24,6 @@ DISCOGS_TOKEN=
 # Default tracks output format: human, csv, pipe, markdown (default: human)
 # DEFAULT_TRACKS_OUTPUT=human
 
+# GetSongBPM API key for BPM lookups (https://getsongbpm.com/api)
+# GETBPM_API_KEY=your_api_key_here
+
