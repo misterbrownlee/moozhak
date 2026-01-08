@@ -28,7 +28,7 @@ jest.unstable_mockModule('../lib/logger.js', () => ({
 }));
 
 // Mock discogs to avoid API dependencies
-jest.unstable_mockModule('../lib/discogs.js', () => ({
+jest.unstable_mockModule('../lib/services/discogs.js', () => ({
   searchDiscogs: jest.fn().mockResolvedValue([]),
   getMaster: jest.fn().mockResolvedValue(null),
   getRelease: jest.fn().mockResolvedValue(null),

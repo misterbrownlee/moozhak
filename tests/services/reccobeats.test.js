@@ -5,7 +5,7 @@ const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 // Mock logger
-jest.unstable_mockModule('../lib/logger.js', () => ({
+jest.unstable_mockModule('../../lib/logger.js', () => ({
   log: {
     debug: jest.fn(),
     error: jest.fn(),
@@ -23,9 +23,9 @@ const {
   formatAudioFeatures,
   isValidReccoBeatsId,
   RECCOBEATS_BASE_URL,
-} = await import('../lib/reccobeats.js');
+} = await import('../../lib/services/reccobeats.js');
 
-const { log } = await import('../lib/logger.js');
+const { log } = await import('../../lib/logger.js');
 
 describe('ReccoBeats API', () => {
   beforeEach(() => {
@@ -468,4 +468,3 @@ describe('isValidReccoBeatsId', () => {
     expect(isValidReccoBeatsId('249504')).toBe(false);
   });
 });
-

@@ -16,7 +16,7 @@ const mockLog = {
   divider: jest.fn(),
 };
 
-jest.unstable_mockModule('../lib/discogs.js', () => ({
+jest.unstable_mockModule('../lib/services/discogs.js', () => ({
   searchDiscogs: mockSearchDiscogs,
   formatResult: (result) => `  ${result.id} | ${result.title}`,
   buildDiscogsUrlFromUri: (uri) => `https://www.discogs.com${uri}`,

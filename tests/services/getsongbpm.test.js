@@ -5,14 +5,14 @@ const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 // Mock config
-jest.unstable_mockModule('../lib/config.js', () => ({
+jest.unstable_mockModule('../../lib/config.js', () => ({
   fileConfig: {
     GETBPM_API_KEY: 'test-api-key',
   },
 }));
 
 // Mock logger
-jest.unstable_mockModule('../lib/logger.js', () => ({
+jest.unstable_mockModule('../../lib/logger.js', () => ({
   log: {
     debug: jest.fn(),
     error: jest.fn(),
@@ -30,9 +30,9 @@ const {
   formatBpmResult,
   isConfigured,
   GETSONGBPM_BASE_URL,
-} = await import('../lib/getsongbpm.js');
+} = await import('../../lib/services/getsongbpm.js');
 
-const { log } = await import('../lib/logger.js');
+const { log } = await import('../../lib/logger.js');
 
 describe('GetSongBPM API', () => {
   beforeEach(() => {
@@ -164,7 +164,9 @@ describe('GetSongBPM API', () => {
         json: async () => mockSearchResult,
       });
 
-      await searchSong('Rick Astley', 'Never Gonna Give You Up', { verbose: true });
+      await searchSong('Rick Astley', 'Never Gonna Give You Up', {
+        verbose: true,
+      });
 
       expect(log.debug).toHaveBeenCalledWith(
         'GetSongBPM: Searching for "Rick Astley" - "Never Gonna Give You Up"',
@@ -484,4 +486,3 @@ describe('formatBpmResult', () => {
     });
   });
 });
-

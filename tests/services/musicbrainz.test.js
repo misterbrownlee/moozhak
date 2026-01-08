@@ -5,7 +5,7 @@ const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 // Mock logger
-jest.unstable_mockModule('../lib/logger.js', () => ({
+jest.unstable_mockModule('../../lib/logger.js', () => ({
   log: {
     debug: jest.fn(),
     error: jest.fn(),
@@ -24,9 +24,9 @@ const {
   isValidMbid,
   MUSICBRAINZ_BASE_URL,
   USER_AGENT,
-} = await import('../lib/musicbrainz.js');
+} = await import('../../lib/services/musicbrainz.js');
 
-const { log } = await import('../lib/logger.js');
+const { log } = await import('../../lib/logger.js');
 
 describe('MusicBrainz API', () => {
   beforeEach(() => {
@@ -68,7 +68,9 @@ describe('MusicBrainz API', () => {
       const result = await getRecording('8f3471b5-7e6a-48da-86a9-c1c07a0f47ae');
 
       expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('/recording/8f3471b5-7e6a-48da-86a9-c1c07a0f47ae'),
+        expect.stringContaining(
+          '/recording/8f3471b5-7e6a-48da-86a9-c1c07a0f47ae',
+        ),
         expect.objectContaining({
           headers: expect.objectContaining({
             'User-Agent': USER_AGENT,
@@ -202,7 +204,10 @@ describe('MusicBrainz API', () => {
       });
 
       jest.advanceTimersByTime(1200);
-      const result = await searchRecordings('Rick Astley', 'Never Gonna Give You Up');
+      const result = await searchRecordings(
+        'Rick Astley',
+        'Never Gonna Give You Up',
+      );
 
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining('recording%3A%22Never+Gonna+Give+You+Up%22'),
@@ -258,7 +263,9 @@ describe('MusicBrainz API', () => {
       });
 
       jest.advanceTimersByTime(2500);
-      const result = await lookupByUrl('https://www.discogs.com/release/249504');
+      const result = await lookupByUrl(
+        'https://www.discogs.com/release/249504',
+      );
 
       expect(mockFetch).toHaveBeenCalledTimes(2);
       expect(result.relations).toHaveLength(1);
@@ -282,7 +289,9 @@ describe('MusicBrainz API', () => {
       await lookupByDiscogsRelease(249504);
 
       expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('https%3A%2F%2Fwww.discogs.com%2Frelease%2F249504'),
+        expect.stringContaining(
+          'https%3A%2F%2Fwww.discogs.com%2Frelease%2F249504',
+        ),
         expect.any(Object),
       );
     });
@@ -503,4 +512,3 @@ describe('isValidMbid', () => {
     expect(isValidMbid('249504')).toBe(false);
   });
 });
-

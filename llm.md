@@ -30,9 +30,14 @@ Follow these principles when modifying or extending this codebase:
 - **One module, one responsibility.** Each file in `lib/` handles a single domain:
   - `config.js` → configuration loading
   - `logger.js` → console/file output
-  - `discogs.js` → API interactions
   - `output.js` → file writing
   - `session.js` → REPL orchestration
+  - `services/` → external API clients (see below)
+- **External services are isolated** in `lib/services/`:
+  - `discogs.js` → Discogs API interactions
+  - `getsongbpm.js` → GetSongBPM API (BPM lookups)
+  - `reccobeats.js` → ReccoBeats API (audio features)
+  - `musicbrainz.js` → MusicBrainz API (metadata/ISRCs)
 - **Commands are isolated.** Each command lives in its own file under `lib/commands/`.
 - **Don't mix I/O with logic.** Keep parsing, validation, and transformation separate from API calls and file writes.
 
@@ -139,12 +144,13 @@ if (command) {
 |---------------------|--------------|
 | New CLI command | `lib/commands/<name>.js` + register in `registry.js` |
 | New setting | Add to `SETTINGS_SCHEMA` in `settings.js` |
-| New API endpoint | Add function to `discogs.js` |
-| New output format | Add case to `formatTrack()` in `discogs.js` |
+| New Discogs endpoint | Add function to `lib/services/discogs.js` |
+| New external API service | Create `lib/services/<service>.js` (see `getsongbpm.js` pattern) |
+| New output format | Add case to `formatTrack()` in `lib/services/discogs.js` |
 | New config option | Add getter to `config.js` |
 | Pure helper function | Same module, or `lib/utils.js` if shared |
-| Tests for pure functions | `tests/<module>.test.js` (no mocks) |
-| Tests for I/O functions | `tests/<module>.test.js` (with mocks) |
+| Tests for services | `tests/services/<service>.test.js` |
+| Tests for commands | `tests/<command>.test.js` |
 
 ## Project Structure
 
@@ -155,8 +161,12 @@ moozhak/
 │   ├── session.js              # REPL loop, startSession(), runSearch(), runTracks()
 │   ├── config.js               # Config loading from .mzkconfig, getter helpers
 │   ├── logger.js               # Console styling (log object), file logging (writeLog)
-│   ├── discogs.js              # API client: createClient(), searchDiscogs(), getMaster(), getRelease()
 │   ├── output.js               # File writers: writeJsonOutput(), writeTracksOutput()
+│   ├── services/               # External API clients
+│   │   ├── discogs.js          # Discogs API: createClient(), searchDiscogs(), getMaster(), getRelease()
+│   │   ├── getsongbpm.js       # GetSongBPM API: findBpm(), searchSong(), getSong(), getArtist()
+│   │   ├── reccobeats.js       # ReccoBeats API: getTrack(), getAudioFeatures() (free endpoints)
+│   │   └── musicbrainz.js      # MusicBrainz API: searchRecordings(), getIsrcsForDiscogsRelease()
 │   └── commands/
 │       ├── index.js            # executeCommand(), parseInput() - main dispatcher
 │       ├── registry.js         # Command assembly: findCommand(), getCommandNames()
@@ -167,8 +177,12 @@ moozhak/
 │       ├── help.js             # helpCommand + showHelp()
 │       └── exit.js             # exitCommand
 ├── tests/
+│   ├── services/               # External API client tests
+│   │   ├── discogs.test.js     # formatTrack(), formatResult() tests
+│   │   ├── getsongbpm.test.js  # GetSongBPM API tests (mocked)
+│   │   ├── reccobeats.test.js  # ReccoBeats API tests (mocked)
+│   │   └── musicbrainz.test.js # MusicBrainz API tests (mocked) - has timing issues
 │   ├── config.test.js          # Config getter tests (pure functions)
-│   ├── discogs.test.js         # formatTrack(), formatResult() tests
 │   ├── commands.test.js        # parseInput, findCommand, parseTracksArgs, SETTINGS_SCHEMA
 │   ├── search.test.js          # handleSearch with mocked API
 │   ├── tracks.test.js          # handleTracks with mocked API
@@ -193,13 +207,14 @@ moozhak/
 Config file searched in order: project root → cwd → home directory.
 
 ```bash
-DISCOGS_TOKEN=<your_token>      # Required for API access
+DISCOGS_TOKEN=<your_token>      # Required for Discogs API access
 ALWAYS_CLEAN=true               # Clean dist/ on session start
 VERBOSE=true                    # Echo commands and HTTP payloads
 PER_PAGE=5                      # Results per search (default: 5)
 DEFAULT_TYPE=master             # Default search type: artist, release, master, label
 DEFAULT_TRACKS_TYPE=master      # Default tracks source: master, release
 DEFAULT_TRACKS_OUTPUT=human     # Default tracks format: human, csv, pipe, markdown
+GETBPM_API_KEY=<your_key>       # GetSongBPM API key for BPM lookups (https://getsongbpm.com/api)
 ```
 
 ## CLI Usage
@@ -299,17 +314,22 @@ export const SETTINGS_SCHEMA = {
 
 | Module | Exports |
 |--------|---------|
-| `config.js` | `fileConfig`, `loadConfig()`, `getPerPage()`, `getDefaultType()`, `getDefaultTracksType()`, `getDefaultTracksOutput()`, `isVerbose()`, `projectRoot` |
+| `config.js` | `fileConfig`, `loadConfig()`, `getPerPage()`, `getDefaultType()`, `getDefaultTracksType()`, `getDefaultTracksOutput()`, `getGetBpmApiKey()`, `isVerbose()`, `projectRoot` |
 | `logger.js` | `log` (styled console), `initLog()`, `writeLog()`, `logApiResponse()` |
-| `discogs.js` | `createClient()`, `searchDiscogs()`, `getMaster()`, `getRelease()`, `formatResult()`, `formatTrack()`, `buildDiscogsUrl()`, `buildDiscogsUrlFromUri()` |
 | `output.js` | `distDir`, `ensureDistDir()`, `writeJsonOutput()`, `writeTracksOutput()` |
 | `session.js` | `startSession()`, `runSearch()`, `runTracks()`, `createSessionFlags()` |
+| `services/discogs.js` | `createClient()`, `searchDiscogs()`, `getMaster()`, `getRelease()`, `formatResult()`, `formatTrack()`, `buildDiscogsUrl()`, `buildDiscogsUrlFromUri()` |
+| `services/getsongbpm.js` | `findBpm()`, `searchSong()`, `searchByTitle()`, `searchArtist()`, `getSong()`, `getArtist()`, `formatBpmResult()`, `isConfigured()` |
+| `services/reccobeats.js` | `getTrack()`, `getTracks()`, `getAudioFeatures()`, `getArtist()`, `getTrackWithFeatures()`, `formatBpm()`, `formatAudioFeatures()`, `isValidReccoBeatsId()` |
+| `services/musicbrainz.js` | `lookupByUrl()`, `lookupByDiscogsRelease()`, `getRelease()`, `getRecording()`, `searchRecordings()`, `getIsrcsForDiscogsRelease()`, `findTrackIsrcs()`, `isValidMbid()` |
 | `commands/index.js` | `executeCommand()`, `parseInput()`, `findCommand()`, `getCommandNames()` |
 | `commands/search.js` | `searchCommand`, `handleSearch()`, `buildSearchOutput()` |
 | `commands/tracks.js` | `tracksCommand`, `handleTracks()`, `parseTracksArgs()`, `extractReleaseInfo()`, `buildTracksOutput()` |
 | `commands/settings.js` | `settingsCommand`, `setCommand`, `handleSet()`, `showSettings()`, `SETTINGS_SCHEMA` |
 
-## Discogs API
+## External APIs
+
+### Discogs API
 
 Using the `disconnect` library. Endpoints used:
 
@@ -318,6 +338,50 @@ Using the `disconnect` library. Endpoints used:
 | `db.search(params)` | Search database |
 | `db.getMaster(id)` | Get master release with tracklist |
 | `db.getRelease(id)` | Get release with tracklist |
+
+### GetSongBPM API
+
+**Base URL:** `https://api.getsong.co`  
+**Auth:** API key via `api_key` query param (get free key at https://getsongbpm.com/api)  
+**Rate Limit:** 3,000 requests/hour
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /search/?type=both&lookup=song:X artist:Y` | Search by artist + title |
+| `GET /song/?id=X` | Get song details (BPM, key, time sig) |
+| `GET /artist/?id=X` | Get artist details |
+
+**Response includes:** `tempo` (BPM), `key_of`, `time_sig`, `danceability`, `acousticness`, `open_key`
+
+### ReccoBeats API
+
+**Base URL:** `https://api.reccobeats.com/v1`  
+**Auth:** None for free endpoints (search requires auth)  
+**Note:** Uses Spotify-based UUIDs, not Discogs IDs
+
+| Endpoint | Auth | Description |
+|----------|------|-------------|
+| `GET /track/:uuid` | Free | Get track details |
+| `GET /track/:uuid/audio-features` | Free | Get BPM, energy, danceability |
+| `GET /track?ids=x,y,z` | Free | Batch get tracks |
+| `GET /artist/:uuid` | Free | Get artist details |
+| `GET /tracks/search` | 🔒 | Search tracks (requires auth) |
+| `GET /isrc/:isrc` | 🔒 | Lookup by ISRC (requires auth) |
+
+### MusicBrainz API
+
+**Base URL:** `https://musicbrainz.org/ws/2`  
+**Auth:** None (requires User-Agent header)  
+**Rate Limit:** 1 request/second
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /url?resource=X` | Lookup by external URL (Discogs, Spotify, etc.) |
+| `GET /release/:mbid?inc=recordings+isrcs` | Get release with ISRCs |
+| `GET /recording/:mbid?inc=isrcs` | Get recording with ISRCs |
+| `GET /recording?query=X` | Search recordings by artist/title |
+
+**Use case:** Bridge Discogs releases to ISRCs for cross-referencing with other services
 
 ## Output Formats
 
@@ -383,12 +447,15 @@ npm run test:watch      # Watch mode
 npm run test:coverage   # With coverage report
 ```
 
-### Test Files (254 tests total)
+### Test Files (318 tests total)
 
 | File | Tests | Description |
 |------|-------|-------------|
+| `services/discogs.test.js` | 27 | `formatTrack()`, `formatResult()`, `buildDiscogsUrl()`, `buildDiscogsUrlFromUri()` |
+| `services/getsongbpm.test.js` | 27 | `findBpm()`, `searchSong()`, `formatBpmResult()` (mocked API) |
+| `services/reccobeats.test.js` | 37 | `getTrack()`, `getAudioFeatures()`, `formatBpm()` (mocked API) |
+| `services/musicbrainz.test.js` | 22 | `searchRecordings()`, `getIsrcsForDiscogsRelease()` (mocked - has timing issues) |
 | `config.test.js` | 37 | Config getter validation (pure functions) |
-| `discogs.test.js` | 27 | `formatTrack()`, `formatResult()`, `buildDiscogsUrl()`, `buildDiscogsUrlFromUri()` |
 | `commands.test.js` | 63 | `parseInput`, `findCommand`, `parseTracksArgs`, `SETTINGS_SCHEMA` validators |
 | `search.test.js` | 24 | `handleSearch`, `searchCommand`, `buildSearchOutput` (mocked API + pure) |
 | `tracks.test.js` | 39 | `handleTracks`, `tracksCommand`, `extractReleaseInfo`, `buildTracksOutput` (mocked API + pure) |
@@ -398,18 +465,19 @@ npm run test:coverage   # With coverage report
 ### Testing Strategy
 
 **Pure functions (no mocks):**
-- Config getters: `getPerPage()`, `getDefaultType()`, etc.
-- Formatters: `formatTrack()`, `formatResult()`
+- Config getters: `getPerPage()`, `getDefaultType()`, `getGetBpmApiKey()`, etc.
+- Formatters: `formatTrack()`, `formatResult()`, `formatBpm()`, `formatBpmResult()`, `formatAudioFeatures()`
 - URL builders: `buildDiscogsUrl()`, `buildDiscogsUrlFromUri()`
 - Output builders: `buildSearchOutput()`, `buildTracksOutput()`, `extractReleaseInfo()`
 - Parsers: `parseInput()`, `parseTracksArgs()`
-- Validators: `SETTINGS_SCHEMA.*.validate/transform`
+- Validators: `SETTINGS_SCHEMA.*.validate/transform`, `isValidReccoBeatsId()`, `isValidMbid()`
 - Registry: `findCommand()`, `getCommandNames()`
 
 **With mocks (Jest `unstable_mockModule`):**
 - Command handlers: `handleSearch()`, `handleTracks()`
 - Settings: `handleSet()`, `showSettings()`
 - Routing: `executeCommand()`
+- External APIs: `findBpm()`, `searchSong()`, `getTrack()`, `getAudioFeatures()`, `searchRecordings()`
 
 ### Jest ESM Mocking Pattern
 
@@ -442,9 +510,14 @@ const { handleSearch } = await import('../lib/commands/search.js');
 
 ## TODO
 
+- [ ] Add `bpm` command for interactive BPM lookups via GetSongBPM
 - [ ] Re-enable playlist command (CSV batch search)
 - [ ] `--open` flag to open results in browser
 - [ ] Additional Discogs endpoints (artist details, etc.)
 - [ ] Autocomplete for commands using `@inquirer/search`
+- [ ] Fix MusicBrainz test timing issues (rate limit simulation)
 - [x] Tests (Jest setup with pure function tests)
 - [x] Tests for command handlers with mocks
+- [x] GetSongBPM integration for BPM lookups
+- [x] ReccoBeats integration (free endpoints only)
+- [x] MusicBrainz integration for ISRC bridging

@@ -19,7 +19,7 @@ const mockLog = {
   divider: jest.fn(),
 };
 
-jest.unstable_mockModule('../lib/discogs.js', () => ({
+jest.unstable_mockModule('../lib/services/discogs.js', () => ({
   getMaster: mockGetMaster,
   getRelease: mockGetRelease,
   formatTrack: (track, idx, format) => {

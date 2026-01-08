@@ -7,7 +7,7 @@ import {
   buildDiscogsUrlFromUri,
   formatResult,
   formatTrack,
-} from '../lib/discogs.js';
+} from '../../lib/services/discogs.js';
 
 describe('formatTrack', () => {
   const sampleTrack = {
