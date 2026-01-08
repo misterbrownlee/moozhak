@@ -178,6 +178,9 @@ For coding principles, architecture documentation, and contribution guidelines, 
 - [disconnect](https://github.com/bartve/disconnect) - Discogs API client
 - [ansis](https://github.com/nicolo-ribaudo/ansis) - Terminal colors
 
+Looking into:
+- [Get BPM](https://getsongbpm.com) which has an API.
+
 ## License
 
 ISC
