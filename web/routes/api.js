@@ -189,7 +189,7 @@ router.post(
     if (!username) {
       return res.status(400).json({
         error:
-          'Discogs username not configured. Set it in Settings or send the X-Moozhak-Discogs-Username header.',
+          'Discogs username not configured. Set it in Settings or send the x-moozhak-discogs-username header.',
       });
     }
 
@@ -419,7 +419,7 @@ router.post(
     if (!isBpmConfigured(bpmKey)) {
       return res.status(400).json({
         error:
-          'GetSongBPM API key not configured. Set it in Settings or send the X-Moozhak-GetSongBpm-Key header.',
+          'GetSongBPM API key not configured. Set it in Settings or send the x-moozhak-getsongbpm-key header.',
       });
     }
 
@@ -487,7 +487,7 @@ router.post(
     if (!isBpmConfigured(bpmKey)) {
       return res.status(400).json({
         error:
-          'GetSongBPM API key not configured. Set it in Settings or send the X-Moozhak-GetSongBpm-Key header.',
+          'GetSongBPM API key not configured. Set it in Settings or send the x-moozhak-getsongbpm-key header.',
       });
     }
 

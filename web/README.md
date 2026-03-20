@@ -30,7 +30,7 @@ open http://localhost:3000
 - **Edit** - Modify album details (title, artist, year, format, notes)
 - **Delete** - Remove albums from your library
 - **Print Cards** - Generate printable track listings (4" wide, optimized for print)
-- **Themes** - Switch between Nord, Light, Dark, and Cupcake themes
+- **Themes** - DaisyUI themes are wired in CSS (`data-theme` on `<html>`); the navbar theme picker is currently **commented out** in `layouts/main.ejs`, so the default theme is fixed unless you enable it or change `data-theme` in the layout.
 - **BPM Lookup** - Look up tempo, key, and time signature for all tracks on an album (requires GetSongBPM key in Settings or header)
 - **Settings** - Store Discogs and GetSongBPM defaults in SQLite (`/settings`)
 
@@ -79,6 +79,7 @@ npm run web:css:watch   # Watch and rebuild CSS (aliases: css:watch)
 | `/api/library/:id` | PUT | Update library item |
 | `/api/library/:id` | DELETE | Remove from library |
 | `/api/library/:id/bpm` | POST | Look up BPM for all tracks on album |
+| `/api/bpm/lookup` | POST | Single-track BPM lookup; JSON body `{ "artist", "title" }` |
 | `/api/collection` | GET | Get cached Discogs collection |
 | `/api/collection/export` | GET | Export cached collection JSON (404 if none) |
 | `/api/collection/import` | POST | Replace collection cache from JSON body (same shape as export) |
@@ -96,9 +97,11 @@ For **`/api/*` JSON routes**, the server resolves credentials in this order:
 
 | Header | Purpose |
 |--------|---------|
-| `X-Moozhak-Discogs-Token` | Discogs personal access token |
-| `X-Moozhak-Discogs-Username` | Discogs profile name (collection sync) |
-| `X-Moozhak-GetSongBpm-Key` | GetSongBPM API key |
+| `x-moozhak-discogs-token` | Discogs personal access token |
+| `x-moozhak-discogs-username` | Discogs profile name (collection sync) |
+| `x-moozhak-getsongbpm-key` | GetSongBPM API key |
+
+Names match [`MOOZAK_CREDENTIAL_HEADERS`](./lib/credentialHeaders.js); HTTP treats header names case-insensitively, but use these literals in clients and docs.
 
 **Server-rendered pages** (initial Search HTML) use **stored defaults only**—they do not read these headers.
 
@@ -158,6 +161,7 @@ web/
 │   │   ├── tracklist.ejs     # Track table
 │   │   ├── search-result-card.ejs
 │   │   ├── library-card.ejs
+│   │   ├── discogs-config-warning.ejs  # Banner when token/username missing
 │   │   ├── item-card.ejs     # Generic card for library/collection
 │   │   ├── item-list-row.ejs # Generic list row for library/collection
 │   │   ├── view-toggle.ejs   # Card/list view toggle buttons
@@ -165,8 +169,9 @@ web/
 │   ├── index.ejs             # Search page
 │   ├── library.ejs           # Library page (card/list views)
 │   ├── collection.ejs        # Discogs collection page
+│   ├── settings.ejs          # SQLite-backed defaults (Discogs + GetSongBPM)
 │   ├── edit.ejs              # Edit album details page
-│   └── print.ejs             # Print view (uses Alpine.js)
+│   └── print.ejs             # Print view (uses Alpine.js; wrapped in main layout)
 ├── public/                   # Static files
 │   ├── app.js                # Client-side JavaScript (vinylApp)
 │   ├── moozhak-domain.js     # Copy of core/domain/library.js (sync:domain)
@@ -215,6 +220,7 @@ Include reusable components with data:
 | `badge` | `text`, `variant` ('default', 'ghost', 'outline', 'sm-ghost', etc.) |
 | `tracklist` | `tracklist` (array), `compact` (boolean) |
 | `search-result-card` | `result`, `inLibrary` |
+| `discogs-config-warning` | (none; uses `showDiscogsWarning`, `discogsTokenSet`, `discogsUsernameSet` from parent render) |
 | `library-card` | `item` |
 | `item-card` | `item`, `type` ('library' or 'collection'), `inLibrary` |
 | `item-list-row` | `item`, `type` ('library' or 'collection'), `inLibrary` |
@@ -223,11 +229,9 @@ Include reusable components with data:
 
 ### Layout System
 
-Pages are automatically wrapped in `layouts/main.ejs` which includes:
-- Navigation bar
-- Theme selector
+Pages are automatically wrapped in `layouts/main.ejs` (including `print`) unless `res.render` is called with `layout: false`. The layout includes:
+- Navigation bar (Search, Collection, Library, Settings)
+- Theme selector markup (**commented out** in the template; default `data-theme` remains)
 - Loading indicator
 - Toast notifications
 - Print-specific CSS (`@media print` styles)
-
-All pages use the main layout (no standalone pages).

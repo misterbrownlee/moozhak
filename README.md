@@ -29,7 +29,7 @@ npm run web:css:build # first run or after style changes (alias: css:build)
 
 Discogs token, username, and GetSongBPM API key are stored in **SQLite** via the in-app **Settings** page (`/settings`). The web app does not require `.mzkconfig` for those values.
 
-Optional **per-request HTTP headers** let API clients supply their own credentials (see [web/README.md](./web/README.md)): `X-Moozhak-Discogs-Token`, `X-Moozhak-Discogs-Username`, `X-Moozhak-GetSongBpm-Key` (header wins over stored defaults for that request).
+Optional **per-request HTTP headers** let API clients supply their own credentials (see [web/README.md](./web/README.md)): `x-moozhak-discogs-token`, `x-moozhak-discogs-username`, `x-moozhak-getsongbpm-key` (header wins over stored defaults for that request; names are case-insensitive in HTTP but we standardize on these literals).
 
 ### Data directory and SDK / legacy
 
@@ -80,6 +80,8 @@ npm run docs:check
 | `clean` / `clean:artifacts` / `clean:all` | Remove `dist/*` and `.logs/*` (not `data/`) |
 | `clean:data` | Remove `data/*` (SQLite and local files—destructive) |
 | `clean:dist` / `clean:logs` | Granular clean steps |
+
+Other scripts (`lint:fix`, `format`, `test:watch`, `test:coverage`, `docs:check`) are listed in `package.json`.
 
 ## Dependencies (runtime)
 

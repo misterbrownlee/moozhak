@@ -1,6 +1,6 @@
-# Muzak Configuration
-# copy this file to ../.mzkconfig
-# and update whatever setting turns your propeller
+# Moozhak configuration (reference)
+# Copy to `.mzkconfig` in the project root (same directory as package.json).
+# The web app stores Discogs/GetSongBPM defaults in SQLite via /settings; this file is mainly for SDK / env-style use and MOOZAK_DATA_DIR.
 
 # Your Discogs token
 DISCOGS_TOKEN=

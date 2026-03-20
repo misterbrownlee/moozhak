@@ -1,6 +1,7 @@
 /**
- * HTTP header names for per-request API credentials (lowercase; Express normalizes incoming headers).
- * Documented in web/README.md
+ * Literal HTTP header names for per-request API credentials.
+ * Express lowercases `req.headers` keys; use these exact strings in code and documentation.
+ * @see web/README.md
  */
 export const MOOZAK_CREDENTIAL_HEADERS = {
   DISCOGS_TOKEN: 'x-moozhak-discogs-token',

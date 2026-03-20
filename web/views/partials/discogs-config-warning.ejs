@@ -6,7 +6,7 @@
     <p class="text-sm">
       <% if (typeof discogsTokenSet !== 'undefined' && !discogsTokenSet) { %><span>Personal access token is missing.</span><% } %>
       <% if (typeof discogsUsernameSet !== 'undefined' && !discogsUsernameSet) { %><span><%= typeof discogsTokenSet !== 'undefined' && !discogsTokenSet ? ' ' : '' %>Discogs username is missing.</span><% } %>
-      Set both in <a href="/settings" class="link font-semibold">Settings</a> (stored on this server). For JSON API calls you can also send <code class="text-xs">X-Moozhak-Discogs-Token</code> and <code class="text-xs">X-Moozhak-Discogs-Username</code>.
+      Set both in <a href="/settings" class="link font-semibold">Settings</a> (stored on this server). For JSON API calls you can also send <code class="text-xs">x-moozhak-discogs-token</code> and <code class="text-xs">x-moozhak-discogs-username</code>.
     </p>
   </div>
 </div>
