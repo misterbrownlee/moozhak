@@ -30,3 +30,9 @@ DISCOGS_TOKEN=
 # GetSongBPM API key for BPM lookups (https://getsongbpm.com/api)
 # GETBPM_API_KEY=your_api_key_here
 
+# Optional: web app data directory (SQLite DB, legacy JSON import). Overrides default `data/`.
+# Absolute path, or relative to the project root when using the repo's `.mzkconfig`.
+# Environment variable MOOZAK_DATA_DIR still wins if set (e.g. in tests).
+# MOOZAK_DATA_DIR=/path/to/my-moozhak-data
+# MOOZAK_DATA_DIR=../moozhak-data
+

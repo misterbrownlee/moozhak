@@ -23,13 +23,17 @@ import {
   getCollectionMetadata,
   getCollectionReleases,
   hasCollection,
+  loadCollection,
+  replaceCollectionPayload,
   saveCollection,
 } from '../lib/collection.js';
 import {
   addToLibrary,
+  buildLibraryData,
   getLibraryItem,
   loadLibrary,
   removeFromLibrary,
+  replaceLibraryItems,
   updateLibraryItem,
 } from '../lib/library.js';
 import { logUserAction } from '../lib/webLogger.js';
@@ -216,6 +220,38 @@ router.post(
   }),
 );
 
+router.get(
+  '/collection/export',
+  asyncHandler(async (_req, res) => {
+    const data = loadCollection();
+    if (!data) {
+      return res.status(404).json({ error: 'No collection data to export' });
+    }
+    res.json(data);
+  }),
+);
+
+router.post(
+  '/collection/import',
+  asyncHandler(async (req, res) => {
+    const body = req.body;
+    if (!body || typeof body !== 'object') {
+      return res.status(400).json({ error: 'JSON body required' });
+    }
+    if (!Array.isArray(body.releases)) {
+      return res.status(400).json({
+        error: 'Body must include a "releases" array (collection shape)',
+      });
+    }
+    replaceCollectionPayload(body);
+    logUserAction('collection_import', {
+      username: body.username,
+      count: body.releases?.length ?? 0,
+    });
+    res.json({ success: true, count: body.releases.length });
+  }),
+);
+
 // ============================================
 // Library Routes
 // ============================================
@@ -225,6 +261,30 @@ router.get(
   asyncHandler(async (_req, res) => {
     const library = loadLibrary();
     res.json({ items: library });
+  }),
+);
+
+router.get(
+  '/library/export',
+  asyncHandler(async (_req, res) => {
+    const items = loadLibrary();
+    res.json(buildLibraryData(items));
+  }),
+);
+
+router.post(
+  '/library/import',
+  asyncHandler(async (req, res) => {
+    const body = req.body;
+    const items = Array.isArray(body?.items) ? body.items : null;
+    if (!items) {
+      return res
+        .status(400)
+        .json({ error: 'Request body must include an "items" array' });
+    }
+    replaceLibraryItems(items);
+    logUserAction('library_import', { count: items.length });
+    res.json({ success: true, count: items.length });
   }),
 );
 

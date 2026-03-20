@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, isAbsolute, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -111,6 +111,17 @@ export function getGetBpmApiKey() {
  */
 export function getDiscogsUsername() {
   return fileConfig.DISCOGS_USERNAME || null;
+}
+
+/**
+ * Web app data directory from `.mzkconfig` (`MOOZAK_DATA_DIR`).
+ * Relative paths are resolved against the repo/project root (same root used to load bundled config).
+ * @returns {string|null} Absolute path, or null when unset
+ */
+export function getMoozhakDataDirFromConfig() {
+  const raw = fileConfig.MOOZAK_DATA_DIR?.trim();
+  if (!raw) return null;
+  return isAbsolute(raw) ? raw : join(projectRoot, raw);
 }
 
 // Export project root for other modules

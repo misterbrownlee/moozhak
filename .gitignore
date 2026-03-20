@@ -16,6 +16,12 @@ dist/
 # User data
 data/
 
+# Local SQLite (web app: moozhak.db under data/ or MOOZAK_DATA_DIR)
+# Include WAL/SHM so journals are never committed if the DB lives outside data/
+*.db
+*.db-shm
+*.db-wal
+
 # Generated CSS
 web/public/styles.css
 

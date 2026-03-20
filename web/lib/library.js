@@ -1,47 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = join(__dirname, '../../data');
-const LIBRARY_FILE = join(DATA_DIR, 'library.json');
-
-// ============================================
-// I/O Functions (isolated)
-// ============================================
-
-/**
- * Ensure data directory exists
- */
-function ensureDataDir() {
-  if (!existsSync(DATA_DIR)) {
-    mkdirSync(DATA_DIR, { recursive: true });
-  }
-}
-
-/**
- * Read library file from disk
- * @returns {string|null} File contents or null if not found
- */
-function readLibraryFile() {
-  ensureDataDir();
-  if (!existsSync(LIBRARY_FILE)) return null;
-
-  try {
-    return readFileSync(LIBRARY_FILE, 'utf-8');
-  } catch (error) {
-    console.error('Error reading library file:', error);
-    return null;
-  }
-}
-
-/**
- * Write library data to disk
- */
-function writeLibraryFile(data) {
-  ensureDataDir();
-  writeFileSync(LIBRARY_FILE, JSON.stringify(data, null, 2), 'utf-8');
-}
+import { getDb } from './persistence/sqlite/db.js';
 
 // ============================================
 // Pure Functions (business logic)
@@ -55,7 +12,7 @@ export function generateId() {
 }
 
 /**
- * Parse library file contents
+ * Parse library file contents (legacy JSON file body)
  */
 export function parseLibraryData(content) {
   if (!content) return [];
@@ -70,7 +27,7 @@ export function parseLibraryData(content) {
 }
 
 /**
- * Build library file structure
+ * Build library file structure (export / legacy envelope)
  */
 export function buildLibraryData(items) {
   return {
@@ -121,33 +78,96 @@ export function findItemByDiscogsId(items, discogsId) {
 }
 
 // ============================================
-// Combined Functions (I/O + Logic)
+// SQLite persistence
 // ============================================
 
-/**
- * Load library from JSON file
- */
-export function loadLibrary() {
-  const content = readLibraryFile();
-  return parseLibraryData(content);
+function rowToItem(row) {
+  try {
+    return JSON.parse(row.item_json);
+  } catch {
+    return null;
+  }
 }
 
 /**
- * Save library to JSON file
+ * Load library items in stable order (insertion order).
+ * @returns {object[]}
+ */
+export function loadLibrary() {
+  const db = getDb();
+  const rows = db
+    .prepare('SELECT item_json FROM library_items ORDER BY rowid ASC')
+    .all();
+  return rows.map(rowToItem).filter(Boolean);
+}
+
+/**
+ * Replace all library items (used for import). Runs in a transaction.
+ * @param {object[]} items
+ */
+export function replaceLibraryItems(items) {
+  const db = getDb();
+  const del = db.prepare('DELETE FROM library_items');
+  const ins = db.prepare(
+    `INSERT INTO library_items (id, discogs_id, item_json, added_at, updated_at)
+     VALUES (@id, @discogs_id, @item_json, @added_at, @updated_at)`,
+  );
+  const tx = db.transaction((list) => {
+    del.run();
+    for (const raw of list) {
+      const now = new Date().toISOString();
+      const item = raw.id
+        ? raw
+        : {
+            ...raw,
+            id: generateId(),
+            addedAt: raw.addedAt ?? now,
+            updatedAt: raw.updatedAt ?? now,
+          };
+      const discogsId =
+        item.discogsId !== undefined && item.discogsId !== null
+          ? String(item.discogsId)
+          : null;
+      ins.run({
+        id: item.id,
+        discogs_id: discogsId,
+        item_json: JSON.stringify(item),
+        added_at: item.addedAt ?? null,
+        updated_at: item.updatedAt ?? null,
+      });
+    }
+  });
+  tx(items);
+}
+
+/**
+ * Legacy no-op for callers that saved the whole array; SQLite persists per row.
+ * @param {object[]} items
  */
 export function saveLibrary(items) {
-  const data = buildLibraryData(items);
-  writeLibraryFile(data);
+  replaceLibraryItems(items);
 }
 
 /**
  * Add item to library
  */
 export function addToLibrary(item) {
-  const library = loadLibrary();
+  const db = getDb();
   const newItem = createLibraryItem(item);
-  library.push(newItem);
-  saveLibrary(library);
+  const discogsId =
+    newItem.discogsId !== undefined && newItem.discogsId !== null
+      ? String(newItem.discogsId)
+      : null;
+  db.prepare(
+    `INSERT INTO library_items (id, discogs_id, item_json, added_at, updated_at)
+     VALUES (?, ?, ?, ?, ?)`,
+  ).run(
+    newItem.id,
+    discogsId,
+    JSON.stringify(newItem),
+    newItem.addedAt,
+    newItem.updatedAt,
+  );
   return newItem;
 }
 
@@ -155,42 +175,61 @@ export function addToLibrary(item) {
  * Update library item
  */
 export function updateLibraryItem(id, updates) {
-  const library = loadLibrary();
-  const index = library.findIndex((item) => item.id === id);
+  const db = getDb();
+  const row = db
+    .prepare('SELECT item_json FROM library_items WHERE id = ?')
+    .get(id);
+  if (!row) return null;
 
-  if (index === -1) return null;
+  const item = rowToItem(row);
+  if (!item) return null;
 
-  library[index] = applyItemUpdates(library[index], updates);
-  saveLibrary(library);
-  return library[index];
+  const next = applyItemUpdates(item, updates);
+  const discogsId =
+    next.discogsId !== undefined && next.discogsId !== null
+      ? String(next.discogsId)
+      : null;
+  db.prepare(
+    `UPDATE library_items SET item_json = ?, updated_at = ?, discogs_id = ? WHERE id = ?`,
+  ).run(JSON.stringify(next), next.updatedAt, discogsId, id);
+  return next;
 }
 
 /**
  * Remove item from library
  */
 export function removeFromLibrary(id) {
-  const library = loadLibrary();
-  const index = library.findIndex((item) => item.id === id);
-
-  if (index === -1) return false;
-
-  library.splice(index, 1);
-  saveLibrary(library);
-  return true;
+  const db = getDb();
+  const result = db.prepare('DELETE FROM library_items WHERE id = ?').run(id);
+  return result.changes > 0;
 }
 
 /**
  * Get single library item by ID
  */
 export function getLibraryItem(id) {
-  const library = loadLibrary();
-  return findItemById(library, id);
+  const db = getDb();
+  const row = db
+    .prepare('SELECT item_json FROM library_items WHERE id = ?')
+    .get(id);
+  if (!row) return null;
+  return rowToItem(row);
 }
 
 /**
  * Find item by Discogs ID
  */
 export function findByDiscogsId(discogsId) {
-  const library = loadLibrary();
-  return findItemByDiscogsId(library, discogsId);
+  const db = getDb();
+  const sid = String(discogsId);
+  const row = db
+    .prepare('SELECT item_json FROM library_items WHERE discogs_id = ?')
+    .get(sid);
+  if (row) return rowToItem(row);
+  const rows = db.prepare('SELECT item_json FROM library_items').all();
+  for (const r of rows) {
+    const item = rowToItem(r);
+    if (item && String(item.discogsId) === sid) return item;
+  }
+  return null;
 }

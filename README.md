@@ -30,6 +30,7 @@ Copy `example.mzkconfig` to `.mzkconfig` in the project root (or home directory)
 - `DISCOGS_TOKEN` – Discogs API (optional but recommended)
 - `GETBPM_API_KEY` – GetSongBPM (BPM/key on library)
 - `DISCOGS_USERNAME` – collection sync in the web app
+- `MOOZAK_DATA_DIR` – optional web app data directory (absolute or project-relative); same key as the env var, but **env wins** if both are set (e.g. tests)
 - `VERBOSE=true` – verbose API logging
 
 ## Development
@@ -44,11 +45,15 @@ npm run docs:check
 
 ## Runtime data
 
-- `data/` – `library.json`, `collection.json` (web)
+- `data/` – default directory for the web app (`MOOZAK_DATA_DIR` in `.mzkconfig` or as an environment variable; env overrides config)
+  - **`moozhak.db`** – SQLite WAL database (canonical library + cached collection)
+  - **`library.json` / `collection.json`** – if present when the DB is first created and empty, they are **imported once**; use **export** API for backups (see [web/README.md](./web/README.md))
 - `.logs/` – web and API logs
+- `npm run clean:data` – deletes contents of `data/` (including the database)
 
 ## Dependencies (runtime)
 
+- [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) – local SQLite for web persistence
 - [disconnect](https://github.com/bartve/disconnect) – Discogs
 - [ansis](https://github.com/nicolo-ribaudo/ansis) – styled logs
 - [express](https://expressjs.com/) + [ejs](https://ejs.co/)

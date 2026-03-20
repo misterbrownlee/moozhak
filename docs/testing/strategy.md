@@ -9,18 +9,24 @@ Tests should provide confidence without fragile mock setups.
 - Mock unstable boundaries only: network, time, file IO, process env.
 - Add regression tests before or with major refactors.
 
-## Test Allocation
+## Test allocation
 
-- `core/`: unit tests for transforms and wrapper contracts.
-- `web/server/`: request-response tests around routes/controllers.
-- `web/client/`: tests for user-visible behavior where practical.
+- `core/`: unit tests for transforms and wrapper contracts (e.g. [tests/core/domain](../../tests/core/domain)).
+- **Web HTTP**: integration tests under [tests/web](../../tests/web) using `supertest` against `createApp()` from [web/app.js](../../web/app.js).
+- `web/client/`: optional tests for user-visible behavior where practical.
+
+### Web integration conventions
+
+- Set the **`MOOZAK_DATA_DIR` environment variable** in `beforeAll` to a unique temp directory so SQLite (`moozhak.db`) and any legacy `library.json` / `collection.json` fixtures do not touch the developer’s real `data/` folder (env overrides `.mzkconfig`).
+- Dynamically `import()` the app **after** `jest.unstable_mockModule()` when mocking ESM dependencies (e.g. GetSongBPM in [tests/web/api.test.js](../../tests/web/api.test.js)).
+- Clear tables between cases with `clearAllPersistenceTables()` from [web/lib/persistence/sqlite/db.js](../../web/lib/persistence/sqlite/db.js); `closeDb()` in `afterAll` if removing the temp directory (file lock).
 
 ## Non-Regression Requirements
 
 - Local library create/read/update/delete workflows remain correct.
 - BPM card print payload and rendering assumptions remain correct.
 
-## Refactor Testing Flow
+## Refactor testing flow
 
 1. Capture current behavior with focused tests.
 2. Move code behind stable contracts.

@@ -1,54 +1,11 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = join(__dirname, '../../data');
-const COLLECTION_FILE = join(DATA_DIR, 'collection.json');
-
-// ============================================
-// I/O Functions (isolated)
-// ============================================
-
-/**
- * Ensure data directory exists
- */
-function ensureDataDir() {
-  if (!existsSync(DATA_DIR)) {
-    mkdirSync(DATA_DIR, { recursive: true });
-  }
-}
-
-/**
- * Read collection file from disk
- * @returns {string|null} File contents or null if not found
- */
-function readCollectionFile() {
-  ensureDataDir();
-  if (!existsSync(COLLECTION_FILE)) return null;
-
-  try {
-    return readFileSync(COLLECTION_FILE, 'utf-8');
-  } catch (error) {
-    console.error('Error reading collection file:', error);
-    return null;
-  }
-}
-
-/**
- * Write collection data to disk
- */
-function writeCollectionFile(data) {
-  ensureDataDir();
-  writeFileSync(COLLECTION_FILE, JSON.stringify(data, null, 2), 'utf-8');
-}
+import { getDb } from './persistence/sqlite/db.js';
 
 // ============================================
 // Pure Functions (business logic)
 // ============================================
 
 /**
- * Parse collection file contents
+ * Parse collection file contents (legacy JSON)
  */
 export function parseCollectionData(content) {
   if (!content) return null;
@@ -95,39 +52,64 @@ export function normalizeCollectionRelease(release) {
     thumb: info.thumb || '',
     cover: info.cover_image || info.thumb || '',
     dateAdded: release.date_added,
-    // Keep original data for reference
     _raw: release,
   };
 }
 
 // ============================================
-// Combined Functions (I/O + Logic)
+// SQLite persistence
 // ============================================
 
-/**
- * Load collection from JSON file
- * @returns {Object|null} Collection data or null if not found
- */
-export function loadCollection() {
-  const content = readCollectionFile();
-  return parseCollectionData(content);
+function readPayload(db) {
+  const row = db
+    .prepare('SELECT payload_json FROM collection_cache WHERE singleton = 1')
+    .get();
+  if (!row?.payload_json) return null;
+  try {
+    return JSON.parse(row.payload_json);
+  } catch {
+    return null;
+  }
 }
 
 /**
- * Save collection to JSON file
- * @param {string} username - Discogs username
- * @param {Array} releases - Releases from Discogs API
- * @param {Object} pagination - Pagination info
+ * Load collection from DB
+ * @returns {Object|null}
+ */
+export function loadCollection() {
+  return readPayload(getDb());
+}
+
+/**
+ * Save collection to DB
+ * @param {string} username
+ * @param {Array} releases
+ * @param {Object} pagination
  */
 export function saveCollection(username, releases, pagination) {
   const data = buildCollectionData(username, releases, pagination);
-  writeCollectionFile(data);
+  const db = getDb();
+  db.prepare(
+    `INSERT INTO collection_cache (singleton, payload_json) VALUES (1, ?)
+     ON CONFLICT(singleton) DO UPDATE SET payload_json = excluded.payload_json`,
+  ).run(JSON.stringify(data));
   return data;
 }
 
 /**
- * Get collection releases (normalized)
- * @returns {Array} Normalized releases or empty array
+ * Replace collection payload (e.g. import). Entire JSON object as stored for GET /collection.
+ * @param {object} payload - Same shape as buildCollectionData output
+ */
+export function replaceCollectionPayload(payload) {
+  const db = getDb();
+  db.prepare(
+    `INSERT INTO collection_cache (singleton, payload_json) VALUES (1, ?)
+     ON CONFLICT(singleton) DO UPDATE SET payload_json = excluded.payload_json`,
+  ).run(JSON.stringify(payload));
+}
+
+/**
+ * @returns {Array}
  */
 export function getCollectionReleases() {
   const collection = loadCollection();
@@ -136,8 +118,7 @@ export function getCollectionReleases() {
 }
 
 /**
- * Get collection metadata
- * @returns {Object|null} Collection metadata
+ * @returns {Object|null}
  */
 export function getCollectionMetadata() {
   const collection = loadCollection();
@@ -153,7 +134,6 @@ export function getCollectionMetadata() {
 }
 
 /**
- * Check if collection has been synced
  * @returns {boolean}
  */
 export function hasCollection() {

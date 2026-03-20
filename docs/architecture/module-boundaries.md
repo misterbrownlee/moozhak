@@ -7,14 +7,18 @@ Use these boundaries for all refactor work.
 - `core/`
   - External API wrappers
   - Pure domain transforms and contract shaping
-  - No Express, no template rendering, no web route concerns
-- `web/server/`
-  - Route/controller orchestration
-  - Persistence coordination
-  - Response shaping for browser workflows
-- `web/client/`
-  - UI state, rendering, and print interactions
+  - No Express, no template rendering, no web route concerns, no app persistence
+- **Web server layer** (paths in repo today)
+  - [web/server.js](../../web/server.js) — HTTP entry (`listen`), wires [web/app.js](../../web/app.js)
+  - [web/app.js](../../web/app.js) — `createApp()`: Express app, middleware, `/api` and page routes
+  - [web/routes/](../../web/routes/) — API route modules (e.g. [api.js](../../web/routes/api.js))
+  - [web/lib/](../../web/lib/) — persistence, logging, server-only helpers
+  - [web/views/](../../web/views/) — EJS templates and layouts
+- **Web client layer**
+  - [web/public/](../../web/public/) — static assets, Alpine app, synced domain bundle (`moozhak-domain.js`)
   - No server-only filesystem or process concerns
+
+A physical `web/server/` directory is **optional**; the responsibilities above are what matter. If files are moved later, update this doc in the same change set.
 
 ## Design Rules
 

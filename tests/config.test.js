@@ -2,12 +2,15 @@
  * Tests for config.js getter functions
  * No mocks required - tests validation/parsing logic via exported fileConfig object
  */
+import { join } from 'node:path';
 import {
   fileConfig,
   getDefaultTracksOutput,
   getDefaultTracksType,
   getDefaultType,
+  getMoozhakDataDirFromConfig,
   getPerPage,
+  projectRoot,
 } from '../core/config.js';
 
 // Helper to save and restore fileConfig state between tests
@@ -223,5 +226,30 @@ describe('getDefaultTracksOutput', () => {
   it('returns "human" for partial match', () => {
     fileConfig.DEFAULT_TRACKS_OUTPUT = 'hum';
     expect(getDefaultTracksOutput()).toBe('human');
+  });
+});
+
+describe('getMoozhakDataDirFromConfig', () => {
+  beforeEach(() => {
+    delete fileConfig.MOOZAK_DATA_DIR;
+  });
+
+  it('returns null when unset', () => {
+    expect(getMoozhakDataDirFromConfig()).toBeNull();
+  });
+
+  it('returns null for whitespace-only', () => {
+    fileConfig.MOOZAK_DATA_DIR = '   ';
+    expect(getMoozhakDataDirFromConfig()).toBeNull();
+  });
+
+  it('joins relative path to project root', () => {
+    fileConfig.MOOZAK_DATA_DIR = 'my-data';
+    expect(getMoozhakDataDirFromConfig()).toBe(join(projectRoot, 'my-data'));
+  });
+
+  it('preserves absolute path', () => {
+    fileConfig.MOOZAK_DATA_DIR = '/tmp/abs-moozhak';
+    expect(getMoozhakDataDirFromConfig()).toBe('/tmp/abs-moozhak');
   });
 });

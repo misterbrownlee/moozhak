@@ -70,12 +70,16 @@ npm run css:watch   # Watch and rebuild CSS on changes
 | `/api/master/:id` | GET | Get master release details |
 | `/api/release/:id` | GET | Get release details |
 | `/api/library` | GET | Get all library items |
+| `/api/library/export` | GET | Export library as JSON (`version`, `updatedAt`, `items`) |
+| `/api/library/import` | POST | Replace library from JSON body `{ "items": [...] }` |
 | `/api/library/:id` | GET | Get single library item |
 | `/api/library` | POST | Add item to library (handles box sets automatically) |
 | `/api/library/:id` | PUT | Update library item |
 | `/api/library/:id` | DELETE | Remove from library |
 | `/api/library/:id/bpm` | POST | Look up BPM for all tracks on album |
 | `/api/collection` | GET | Get cached Discogs collection |
+| `/api/collection/export` | GET | Export cached collection JSON (404 if none) |
+| `/api/collection/import` | POST | Replace collection cache from JSON body (same shape as export) |
 | `/api/collection/sync` | POST | Sync collection from Discogs |
 | `/api/log` | POST | Log client-side user actions |
 
@@ -108,18 +112,22 @@ The `POST /api/library/:id/bpm` endpoint looks up tempo, key, and time signature
 
 **Rate Limiting**: The GetSongBPM API is limited to 3000 requests/hour. The rate limiter throttles requests when approaching the limit and blocks if exceeded. A `bpmLookupAt` timestamp is stored on the album after lookup.
 
-## Data Storage
+## Data storage
 
-Data is stored as JSON files in the `data/` directory:
-- `data/library.json` - Your vinyl library
-- `data/collection.json` - Cached Discogs collection
+Default data root is the repo `data/` directory. Override with **`MOOZAK_DATA_DIR`** in `.mzkconfig` (relative paths are from the project root) or as an environment variable—**the env var wins** when both are set (e.g. integration tests).
 
-Logs are stored in `.logs/` directory (git-ignored).
+- **`moozhak.db`** – SQLite database (library rows + collection cache). This is the **canonical** store.
+- **Legacy JSON** – If `library.json` / `collection.json` exist in the data root when the DB is first opened and empty, they are imported **once** (idempotent for already-populated DB).
+
+**Backup / portability:** use `GET /api/library/export` and `GET /api/collection/export`. Restore with `POST /api/library/import` and `POST /api/collection/import`.
+
+Logs are stored in `.logs/` (git-ignored).
 
 ## Architecture
 
 ```
 web/
+├── app.js                    # createApp() — used by server and tests
 ├── views/                    # EJS templates
 │   ├── layouts/
 │   │   └── main.ejs          # Base layout (head, navbar, print styles)
@@ -146,10 +154,12 @@ web/
 ├── routes/
 │   └── api.js                # REST API routes
 ├── lib/
-│   ├── library.js            # JSON file storage for library
-│   ├── collection.js         # JSON file storage for collection
+│   ├── dataRoot.js           # MOOZAK_DATA_DIR / default data path
+│   ├── persistence/          # SQLite implementation + README
+│   ├── library.js            # Library facade (SQLite)
+│   ├── collection.js         # Collection cache facade (SQLite)
 │   └── webLogger.js          # Request/action logging
-└── server.js                 # Express server + EJS config
+└── server.js                 # listen() entry (uses createApp)
 ```
 
 ## Tech Stack
