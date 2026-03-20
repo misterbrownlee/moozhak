@@ -8,7 +8,7 @@ Shared **SDK** layer: configuration, logging used by services, external API clie
   - `core/config.js`
   - `core/services/discogs.js`, `getsongbpm.js`, `rateLimiter.js`, etc.
   - `core/domain/library.js`
-- **Browser:** `core/domain/library.js` is copied to `web/public/moozhak-domain.js` by `npm run sync:domain` (also run automatically before `web` / `web:dev` / `build`).
+- **Browser:** `core/domain/library.js` is copied to `web/public/moozhak-domain.js` by `npm run sync:domain` (also run automatically before `web:start` / `web:dev` / `verify` / `build`).
 
 ## Boundaries
 

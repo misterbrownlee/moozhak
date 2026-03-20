@@ -33,4 +33,13 @@ export function applyMigrations(db) {
   if (current < 1) {
     db.prepare('INSERT INTO schema_migrations (version) VALUES (1)').run();
   }
+  if (current < 2) {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS app_settings (
+        key TEXT PRIMARY KEY NOT NULL,
+        value TEXT NOT NULL DEFAULT ''
+      );
+    `);
+    db.prepare('INSERT INTO schema_migrations (version) VALUES (2)').run();
+  }
 }

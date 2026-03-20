@@ -63,8 +63,14 @@ describe('GetSongBPM API', () => {
   });
 
   describe('isConfigured', () => {
-    it('returns true when API key is set', () => {
+    it('returns true when API key is set in file config', () => {
       expect(isConfigured()).toBe(true);
+    });
+
+    it('uses explicit apiKey when provided', () => {
+      expect(isConfigured('inline-key')).toBe(true);
+      expect(isConfigured(null)).toBe(false);
+      expect(isConfigured('')).toBe(false);
     });
   });
 

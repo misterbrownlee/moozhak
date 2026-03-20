@@ -1,7 +1,10 @@
+import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
-import { createClient, searchDiscogs } from '../core/services/discogs.js';
+import { searchDiscogs } from '../core/services/discogs.js';
+import { discogsSetupStatusFromDb } from './lib/appSettings.js';
+import { getDiscogsContextForSsr } from './lib/discogsRuntime.js';
 import { getLibraryItem, loadLibrary } from './lib/library.js';
 import { requestLogger } from './lib/webLogger.js';
 import apiRoutes from './routes/api.js';
@@ -13,7 +16,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
  */
 export function createApp() {
   const app = express();
-  const { db } = createClient();
+  app.locals.gearIconSvg = readFileSync(
+    join(__dirname, 'src/icons/gear.svg'),
+    'utf-8',
+  );
 
   // ============================================
   // View Engine Setup
@@ -73,10 +79,12 @@ export function createApp() {
     if (!query) return null;
 
     try {
+      const { db, isAuthenticated } = getDiscogsContextForSsr();
       return await searchDiscogs(db, query, {
         type: 'master',
         format: 'Vinyl',
         limit: 20,
+        isAuthenticated,
       });
     } catch (error) {
       console.error('Search error:', error.message);
@@ -94,16 +102,24 @@ export function createApp() {
       query: q || '',
       results,
       libraryIds,
+      ...discogsSetupStatusFromDb(),
     });
   }
 
   function handleLibraryPage(_req, res) {
     const items = loadLibrary();
-    res.render('library', { activeView: 'library', items });
+    res.render('library', {
+      activeView: 'library',
+      items,
+      ...discogsSetupStatusFromDb(),
+    });
   }
 
   function handleCollectionPage(_req, res) {
-    res.render('collection', { activeView: 'collection' });
+    res.render('collection', {
+      activeView: 'collection',
+      ...discogsSetupStatusFromDb(),
+    });
   }
 
   function handlePrintPage(req, res) {
@@ -142,6 +158,14 @@ export function createApp() {
   app.get('/library', handleLibraryPage);
   app.get('/library/:id/edit', handleEditPage);
   app.get('/collection', handleCollectionPage);
+
+  app.get('/settings', (_req, res) => {
+    res.render('settings', {
+      activeView: 'settings',
+      ...discogsSetupStatusFromDb(),
+    });
+  });
+
   app.get('/print/:id', handlePrintPage);
 
   return app;

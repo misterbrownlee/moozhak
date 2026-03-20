@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= typeof title !== 'undefined' ? title + ' - ' : '' %>Vinyl Library</title>
   <link rel="stylesheet" href="/styles.css">
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script type="module" src="/init-moozhak-domain.js"></script>
   <script defer src="/app.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <style>
     @media print {
       body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0 !important; padding: 0 !important; }
@@ -32,6 +32,16 @@
         <li><a href="/" class="btn btn-ghost <%= typeof activeView !== 'undefined' && activeView === 'search' ? 'btn-active' : '' %>">Search</a></li>
         <li><a href="/collection" class="btn btn-ghost <%= typeof activeView !== 'undefined' && activeView === 'collection' ? 'btn-active' : '' %>">Collection</a></li>
         <li><a href="/library" class="btn btn-ghost <%= typeof activeView !== 'undefined' && activeView === 'library' ? 'btn-active' : '' %>">Library</a></li>
+        <li>
+          <a href="/settings" title="Settings" class="btn btn-ghost <%= typeof activeView !== 'undefined' && activeView === 'settings' ? 'btn-active' : '' %>">
+            <span class="sr-only">Settings</span>
+            <% if (typeof gearIconSvg !== 'undefined' && gearIconSvg) { %>
+              <span class="inline-flex w-5 h-5 items-center justify-center [&_svg]:w-5 [&_svg]:h-5"><%- gearIconSvg %></span>
+            <% } else { %>
+              <span class="text-lg" aria-hidden="true">⚙</span>
+            <% } %>
+          </a>
+        </li>
       </ul>
       <!-- Theme Selector (hidden for now)
       <select 

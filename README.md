@@ -1,6 +1,6 @@
 # Moozhak
 
-Node.js **vinyl library** app (Discogs search, local library, BPM lookups, printable track cards) plus a reusable **`core` SDK** for the same wrappers and domain logic—suitable for embedding in other runtimes (e.g. mobile) without calling a moozhak HTTP API for Discogs/BPM.
+Node.js **vinyl library** app (Discogs search, local library, BPM lookups, printable track cards) plus a reusable **`core` SDK** for the same wrappers and domain logic. A planned **Android** client ([`scanner/`](./scanner/)) will consume the HTTP API and treat `core/` as the behavioral contract reference.
 
 ## Documentation
 
@@ -20,23 +20,27 @@ Node.js **vinyl library** app (Discogs search, local library, BPM lookups, print
 ```bash
 npm install
 npm run sync:domain   # keep browser copy of domain helpers in sync with core (also runs before web)
-npm run css:build     # first run or after style changes
+npm run web:css:build # first run or after style changes (alias: css:build)
 ```
 
 ## Configuration
 
-Copy `example.mzkconfig` to `.mzkconfig` in the project root (or home directory). Typical keys:
+### Web app
 
-- `DISCOGS_TOKEN` – Discogs API (optional but recommended)
-- `GETBPM_API_KEY` – GetSongBPM (BPM/key on library)
-- `DISCOGS_USERNAME` – collection sync in the web app
-- `MOOZAK_DATA_DIR` – optional web app data directory (absolute or project-relative); same key as the env var, but **env wins** if both are set (e.g. tests)
-- `VERBOSE=true` – verbose API logging
+Discogs token, username, and GetSongBPM API key are stored in **SQLite** via the in-app **Settings** page (`/settings`). The web app does not require `.mzkconfig` for those values.
+
+Optional **per-request HTTP headers** let API clients supply their own credentials (see [web/README.md](./web/README.md)): `X-Moozhak-Discogs-Token`, `X-Moozhak-Discogs-Username`, `X-Moozhak-GetSongBpm-Key` (header wins over stored defaults for that request).
+
+### Data directory and SDK / legacy
+
+- `MOOZAK_DATA_DIR` – optional data directory for the web app (`.mzkconfig` key or environment variable; **env wins** when both are set, e.g. in tests)
+- **`core` SDK** (non-web) may still use `.mzkconfig` / env for `DISCOGS_TOKEN`, `GETBPM_API_KEY`, etc. Copy [example.mzkconfig](./example.mzkconfig) as a reference.
+- `VERBOSE=true` – verbose API logging (file config when using SDK-style loading)
 
 ## Development
 
 ```bash
-npm run web          # start server (syncs domain client bundle first)
+npm run web:start    # start server (syncs domain client bundle first; alias: npm run web)
 npm run web:dev      # server with --watch
 npm test
 npm run lint
@@ -50,6 +54,32 @@ npm run docs:check
   - **`library.json` / `collection.json`** – if present when the DB is first created and empty, they are **imported once**; use **export** API for backups (see [web/README.md](./web/README.md))
 - `.logs/` – web and API logs
 - `npm run clean:data` – deletes contents of `data/` (including the database)
+
+## Clients
+
+| Client | Location | Notes |
+| ------ | -------- | ----- |
+| **Web** | [`web/`](./web/) | Express + EJS + SQLite; primary app today |
+| **Scanner** (planned) | [`scanner/`](./scanner/) | Android; see [scanner/README.md](./scanner/README.md) |
+
+## npm scripts
+
+| Script | Purpose |
+| ------ | ------- |
+| `web:start` / `web` | Run the web server |
+| `web:dev` | Server with `--watch` |
+| `web:dev:restart` / `restart` | `clean:artifacts`, sync domain, build CSS, `web:dev` |
+| `web:css:build` / `css:build` | Tailwind → `web/public/styles.css` |
+| `web:css:watch` / `css:watch` | Watch Tailwind |
+| `sync:domain` | Sync `core/domain` → `web/public/moozhak-domain.js` |
+| `test` | Full Jest suite |
+| `test:web` | Only `tests/web/**` |
+| `test:sdk` | `tests/core`, `tests/services`, `tests/config.test.js` |
+| `verify` | `sync:domain` + lint + test + `web:css:build` (no clean) |
+| `build` | `clean:artifacts` + `verify` |
+| `clean` / `clean:artifacts` / `clean:all` | Remove `dist/*` and `.logs/*` (not `data/`) |
+| `clean:data` | Remove `data/*` (SQLite and local files—destructive) |
+| `clean:dist` / `clean:logs` | Granular clean steps |
 
 ## Dependencies (runtime)
 

@@ -11,10 +11,10 @@ This app is the primary supported runtime and consumes the shared `core` SDK for
 
 ```bash
 # Build CSS (first time only, or after style changes)
-npm run css:build
+npm run web:css:build
 
 # Start the server
-npm run web
+npm run web:start
 
 # Open in browser
 open http://localhost:3000
@@ -24,14 +24,15 @@ open http://localhost:3000
 
 - **Search** - Search Discogs for vinyl master releases
 - **Library** - Save albums to your personal collection with tracklist grouped by side
-- **Collection** - View and sync your Discogs collection (requires `DISCOGS_USERNAME` in config)
+- **Collection** - View and sync your Discogs collection (requires username + token in Settings or credential headers)
 - **Box Sets** - Automatically splits box sets into individual album entries
 - **View Modes** - Toggle between card and list views for library and collection
 - **Edit** - Modify album details (title, artist, year, format, notes)
 - **Delete** - Remove albums from your library
 - **Print Cards** - Generate printable track listings (4" wide, optimized for print)
 - **Themes** - Switch between Nord, Light, Dark, and Cupcake themes
-- **BPM Lookup** - Look up tempo, key, and time signature for all tracks on an album (requires `GETBPM_API_KEY`)
+- **BPM Lookup** - Look up tempo, key, and time signature for all tracks on an album (requires GetSongBPM key in Settings or header)
+- **Settings** - Store Discogs and GetSongBPM defaults in SQLite (`/settings`)
 
 ## Card View Design
 
@@ -44,10 +45,10 @@ Library and collection cards feature a modern overlay design:
 ## NPM Scripts
 
 ```bash
-npm run web         # Start server
+npm run web:start   # Start server (alias: npm run web)
 npm run web:dev     # Start with auto-reload (--watch)
-npm run css:build   # Build Tailwind CSS
-npm run css:watch   # Watch and rebuild CSS on changes
+npm run web:css:build   # Build Tailwind CSS (aliases: css:build)
+npm run web:css:watch   # Watch and rebuild CSS (aliases: css:watch)
 ```
 
 ## Routes
@@ -60,6 +61,7 @@ npm run css:watch   # Watch and rebuild CSS on changes
 | `GET /library` | Library page (card/list view toggle) |
 | `GET /library/:id/edit` | Edit album and track details |
 | `GET /collection` | Discogs collection page |
+| `GET /settings` | Settings (credentials stored in SQLite) |
 | `GET /print/:id` | Printable track card |
 
 ### API (JSON)
@@ -81,7 +83,26 @@ npm run css:watch   # Watch and rebuild CSS on changes
 | `/api/collection/export` | GET | Export cached collection JSON (404 if none) |
 | `/api/collection/import` | POST | Replace collection cache from JSON body (same shape as export) |
 | `/api/collection/sync` | POST | Sync collection from Discogs |
+| `/api/settings` | GET | Public settings shape (`discogsUsername`, `discogsTokenSet`, `getSongBpmKeySet`; secrets are never returned) |
+| `/api/settings` | PUT | Update defaults; JSON body may include `discogsToken`, `discogsUsername`, `getBpmApiKey` (omit or empty string to clear a stored value when that field is sent) |
 | `/api/log` | POST | Log client-side user actions |
+
+## API credentials (Discogs + GetSongBPM)
+
+For **`/api/*` JSON routes**, the server resolves credentials in this order:
+
+1. **HTTP headers** on that request (if non-empty after trim)
+2. Else **stored defaults** from Settings (`app_settings` in SQLite)
+
+| Header | Purpose |
+|--------|---------|
+| `X-Moozhak-Discogs-Token` | Discogs personal access token |
+| `X-Moozhak-Discogs-Username` | Discogs profile name (collection sync) |
+| `X-Moozhak-GetSongBpm-Key` | GetSongBPM API key |
+
+**Server-rendered pages** (initial Search HTML) use **stored defaults only**—they do not read these headers.
+
+Secrets live in the local database file; headers send secrets on the wire—use for trusted clients and local networks.
 
 ## BPM Lookup
 
@@ -116,7 +137,7 @@ The `POST /api/library/:id/bpm` endpoint looks up tempo, key, and time signature
 
 Default data root is the repo `data/` directory. Override with **`MOOZAK_DATA_DIR`** in `.mzkconfig` (relative paths are from the project root) or as an environment variable—**the env var wins** when both are set (e.g. integration tests).
 
-- **`moozhak.db`** – SQLite database (library rows + collection cache). This is the **canonical** store.
+- **`moozhak.db`** – SQLite database (library rows, collection cache, **`app_settings`** for web defaults). This is the **canonical** store.
 - **Legacy JSON** – If `library.json` / `collection.json` exist in the data root when the DB is first opened and empty, they are imported **once** (idempotent for already-populated DB).
 
 **Backup / portability:** use `GET /api/library/export` and `GET /api/collection/export`. Restore with `POST /api/library/import` and `POST /api/collection/import`.
@@ -155,6 +176,9 @@ web/
 │   └── api.js                # REST API routes
 ├── lib/
 │   ├── dataRoot.js           # MOOZAK_DATA_DIR / default data path
+│   ├── appSettings.js        # SQLite app_settings + credential resolvers
+│   ├── credentialHeaders.js  # Header names + resolve helper
+│   ├── discogsRuntime.js     # Per-request Discogs client (API + SSR)
 │   ├── persistence/          # SQLite implementation + README
 │   ├── library.js            # Library facade (SQLite)
 │   ├── collection.js         # Collection cache facade (SQLite)

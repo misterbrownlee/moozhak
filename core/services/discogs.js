@@ -109,12 +109,23 @@ function logVerboseRequest(
 
 /**
  * Create and configure Discogs client
- * @param {string|null} token - Optional token override
+ * @param {string|null|undefined} explicitToken - If not `undefined`, used as the only token source (trimmed; empty → unauthenticated). If `undefined`, falls back to env then fileConfig (SDK / legacy).
  * @returns {Object} { client, db, user, token, isAuthenticated }
  */
-export function createClient(token = null) {
-  const resolvedToken =
-    token || process.env.DISCOGS_TOKEN || fileConfig.DISCOGS_TOKEN;
+export function createClient(explicitToken = undefined) {
+  let resolvedToken;
+  if (explicitToken !== undefined) {
+    if (explicitToken === null || explicitToken === '') {
+      resolvedToken = null;
+    } else {
+      const t = String(explicitToken).trim();
+      resolvedToken = t || null;
+    }
+  } else {
+    const fromEnv = process.env.DISCOGS_TOKEN?.trim();
+    const fromFile = fileConfig.DISCOGS_TOKEN?.trim();
+    resolvedToken = fromEnv || fromFile || null;
+  }
 
   const client = resolvedToken
     ? new Discogs('muzak/1.0.0', { userToken: resolvedToken })

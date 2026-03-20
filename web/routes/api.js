@@ -1,5 +1,4 @@
 import express from 'express';
-import { getDiscogsUsername } from '../../core/config.js';
 import {
   createBoxSetItems,
   extractTracksFromSides,
@@ -8,7 +7,6 @@ import {
   normalizeLibraryItem,
 } from '../../core/domain/library.js';
 import {
-  createClient,
   getCollection,
   getMaster,
   getRelease,
@@ -20,6 +18,13 @@ import {
   lookupAlbumBpm,
 } from '../../core/services/getsongbpm.js';
 import {
+  APP_SETTING_KEYS,
+  getPublicSettingsShape,
+  resolveDiscogsUsernameFromRequest,
+  resolveGetSongBpmApiKeyFromRequest,
+  setAppSettings,
+} from '../lib/appSettings.js';
+import {
   getCollectionMetadata,
   getCollectionReleases,
   hasCollection,
@@ -27,6 +32,7 @@ import {
   replaceCollectionPayload,
   saveCollection,
 } from '../lib/collection.js';
+import { getDiscogsContext } from '../lib/discogsRuntime.js';
 import {
   addToLibrary,
   buildLibraryData,
@@ -40,8 +46,10 @@ import { logUserAction } from '../lib/webLogger.js';
 
 const router = express.Router();
 
-// Initialize Discogs client
-const { db, user, isAuthenticated } = createClient();
+router.use((req, _res, next) => {
+  req.discogs = getDiscogsContext(req);
+  next();
+});
 
 // ============================================
 // Error Handling Utilities
@@ -105,6 +113,7 @@ router.get(
       return res.status(400).json({ error: validation.error });
     }
 
+    const { db, isAuthenticated } = req.discogs;
     const results = await searchDiscogs(db, q, {
       type: 'master',
       format: 'Vinyl',
@@ -119,6 +128,7 @@ router.get(
 router.get(
   '/release/:id',
   asyncHandler(async (req, res) => {
+    const { db, isAuthenticated } = req.discogs;
     const release = await getRelease(db, parseInt(req.params.id, 10), {
       isAuthenticated,
     });
@@ -134,6 +144,7 @@ router.get(
 router.get(
   '/master/:id',
   asyncHandler(async (req, res) => {
+    const { db, isAuthenticated } = req.discogs;
     const master = await getMaster(db, parseInt(req.params.id, 10), {
       isAuthenticated,
     });
@@ -172,14 +183,17 @@ router.get(
 
 router.post(
   '/collection/sync',
-  asyncHandler(async (_req, res) => {
-    const username = getDiscogsUsername();
+  asyncHandler(async (req, res) => {
+    const username = resolveDiscogsUsernameFromRequest(req);
 
     if (!username) {
       return res.status(400).json({
-        error: 'DISCOGS_USERNAME not configured. Please set it in .mzkconfig',
+        error:
+          'Discogs username not configured. Set it in Settings or send the X-Moozhak-Discogs-Username header.',
       });
     }
+
+    const { user, isAuthenticated } = req.discogs;
 
     // Fetch all pages from Discogs
     let allReleases = [];
@@ -358,17 +372,54 @@ router.delete(
 );
 
 // ============================================
+// Settings
+// ============================================
+
+router.get(
+  '/settings',
+  asyncHandler(async (_req, res) => {
+    res.json(getPublicSettingsShape());
+  }),
+);
+
+router.put(
+  '/settings',
+  asyncHandler(async (req, res) => {
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    const patch = {};
+    if ('discogsToken' in body) {
+      patch[APP_SETTING_KEYS.DISCOGS_TOKEN] = body.discogsToken ?? '';
+    }
+    if ('discogsUsername' in body) {
+      patch[APP_SETTING_KEYS.DISCOGS_USERNAME] = body.discogsUsername ?? '';
+    }
+    if ('getBpmApiKey' in body) {
+      patch[APP_SETTING_KEYS.GETBPM_API_KEY] = body.getBpmApiKey ?? '';
+    }
+    if (Object.keys(patch).length === 0) {
+      return res.status(400).json({
+        error:
+          'Provide at least one of: discogsToken, discogsUsername, getBpmApiKey',
+      });
+    }
+    setAppSettings(patch);
+    logUserAction('settings_update', { keys: Object.keys(patch) });
+    res.json({ success: true, settings: getPublicSettingsShape() });
+  }),
+);
+
+// ============================================
 // BPM Lookup Routes
 // ============================================
 
 router.post(
   '/library/:id/bpm',
   asyncHandler(async (req, res) => {
-    // Check if BPM API is configured
-    if (!isBpmConfigured()) {
+    const bpmKey = resolveGetSongBpmApiKeyFromRequest(req);
+    if (!isBpmConfigured(bpmKey)) {
       return res.status(400).json({
         error:
-          'GetSongBPM API key not configured. Set GETBPM_API_KEY in .mzkconfig',
+          'GetSongBPM API key not configured. Set it in Settings or send the X-Moozhak-GetSongBpm-Key header.',
       });
     }
 
@@ -388,6 +439,7 @@ router.post(
     const bpmResults = await lookupAlbumBpm(item.artist, tracks, {
       delayMs: 100,
       verbose: false,
+      apiKey: bpmKey,
     });
 
     if (!bpmResults.success) {
@@ -431,11 +483,11 @@ router.post(
 router.post(
   '/bpm/lookup',
   asyncHandler(async (req, res) => {
-    // Check if BPM API is configured
-    if (!isBpmConfigured()) {
+    const bpmKey = resolveGetSongBpmApiKeyFromRequest(req);
+    if (!isBpmConfigured(bpmKey)) {
       return res.status(400).json({
         error:
-          'GetSongBPM API key not configured. Set GETBPM_API_KEY in .mzkconfig',
+          'GetSongBPM API key not configured. Set it in Settings or send the X-Moozhak-GetSongBpm-Key header.',
       });
     }
 
@@ -446,7 +498,10 @@ router.post(
     }
 
     // Look up BPM for the track
-    const result = await findBpm(artist, title, false);
+    const result = await findBpm(artist, title, {
+      verbose: false,
+      apiKey: bpmKey,
+    });
 
     logUserAction('bpm_track_lookup', {
       artist,

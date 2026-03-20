@@ -435,3 +435,88 @@ function vinylApp() {
     },
   };
 }
+
+// biome-ignore lint/correctness/noUnusedVariables: used by Alpine.js in settings.ejs x-data
+function moozhakSettingsPage() {
+  return {
+    discogsUsername: '',
+    discogsTokenInput: '',
+    getBpmApiKeyInput: '',
+    discogsTokenSet: false,
+    getSongBpmKeySet: false,
+    saving: false,
+    bannerMessage: '',
+    bannerType: 'success',
+
+    async init() {
+      try {
+        await this.reloadFromServer();
+      } catch (e) {
+        console.error(e);
+        this.showBanner('Could not load settings from server.', 'error');
+      }
+    },
+
+    async reloadFromServer() {
+      const response = await fetch('/api/settings');
+      let data = {};
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error('Invalid response from server');
+      }
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to load settings');
+      }
+      this.discogsUsername = data.discogsUsername || '';
+      this.discogsTokenSet = Boolean(data.discogsTokenSet);
+      this.getSongBpmKeySet = Boolean(data.getSongBpmKeySet);
+    },
+
+    showBanner(message, type = 'success') {
+      this.bannerMessage = message;
+      this.bannerType = type;
+      setTimeout(() => {
+        this.bannerMessage = '';
+      }, 4000);
+    },
+
+    async save() {
+      this.saving = true;
+      this.bannerMessage = '';
+      try {
+        const body = { discogsUsername: this.discogsUsername };
+        if (this.discogsTokenInput.trim()) {
+          body.discogsToken = this.discogsTokenInput.trim();
+        }
+        if (this.getBpmApiKeyInput.trim()) {
+          body.getBpmApiKey = this.getBpmApiKeyInput.trim();
+        }
+        const response = await fetch('/api/settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        let data = {};
+        try {
+          data = await response.json();
+        } catch {
+          throw new Error('Invalid response from server');
+        }
+        if (!response.ok) {
+          throw new Error(data.error || 'Save failed');
+        }
+        this.discogsTokenInput = '';
+        this.getBpmApiKeyInput = '';
+        await this.reloadFromServer();
+        this.showBanner('Settings saved.', 'success');
+      } catch (error) {
+        console.error(error);
+        const msg = error instanceof Error ? error.message : 'Save failed';
+        this.showBanner(msg, 'error');
+      } finally {
+        this.saving = false;
+      }
+    },
+  };
+}

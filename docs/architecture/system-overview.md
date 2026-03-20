@@ -21,7 +21,8 @@ Runtime data defaults to the repo `data/` directory; override with `MOOZAK_DATA_
 
 ## Mobile / Other Clients
 
-- Consume `core` (e.g. `core/sdk.js`) locally; external calls go to Discogs, GetSongBPM, etc.—not to a separate “moozhak wrapper” HTTP service.
+- **Scanner (Android, planned)** — stub and notes: [scanner/README.md](../../scanner/README.md). Expect HTTP to the web app’s `/api/*` (or a future extracted API); align behavior with **`core/`** as the contract reference (Node `core` is not embedded in the APK).
+- **Other embedders** — may consume `core` (e.g. `core/sdk.js`) in Node; external calls go to Discogs, GetSongBPM, etc.—not to a separate “moozhak wrapper” HTTP service unless they choose to.
 
 ## Compatibility Commitments
 
@@ -44,14 +45,14 @@ flowchart TB
     persistence["web/lib persistence SQLite"]
   end
   subgraph mobileApps [mobile clients]
-    androidClient["android client"]
-    iosClient["ios client"]
+    scanner["Scanner Android planned"]
+    iosClient["ios future"]
   end
   webClient -->|"HTTP JSON"| webEntry
   webEntry --> webRoutes
   webRoutes --> coreSdk
   webRoutes --> persistence
-  androidClient --> coreSdk
-  iosClient --> coreSdk
+  scanner -->|"HTTP API planned"| webEntry
+  iosClient -->|"future"| webEntry
   coreSdk --> externalApis["Discogs GetSongBPM and others"]
 ```

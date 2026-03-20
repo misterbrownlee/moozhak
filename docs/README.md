@@ -4,7 +4,7 @@ This directory is organized by ownership so docs stay aligned with the codebase 
 
 ## Architecture
 
-- [System Overview](./architecture/system-overview.md)
+- [System Overview](./architecture/system-overview.md) (includes planned [Scanner](../../scanner/README.md) Android client)
 - [Module Boundaries](./architecture/module-boundaries.md)
 - [Refactor Roadmap](./architecture/refactor-roadmap.md)
 

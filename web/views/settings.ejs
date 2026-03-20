@@ -1,0 +1,49 @@
+<%# Settings Page %>
+<div class="max-w-xl mx-auto" x-data="moozhakSettingsPage()">
+  <h2 class="text-2xl font-bold mb-2">Settings</h2>
+  <p class="text-sm text-base-content/60 mb-6">
+    Defaults are stored in the local database on this machine. For programmatic access, you can override per request with the documented HTTP headers.
+  </p>
+
+  <template x-if="bannerMessage">
+    <div class="alert mb-4" :class="bannerType === 'success' ? 'alert-success' : 'alert-error'" x-text="bannerMessage"></div>
+  </template>
+
+  <div class="card bg-base-100 shadow-xl">
+    <div class="card-body gap-4">
+      <label class="form-control w-full">
+        <span class="label-text font-medium">Discogs username</span>
+        <input type="text" class="input input-bordered w-full" x-model="discogsUsername" placeholder="Your Discogs profile name" autocomplete="username">
+      </label>
+
+      <label class="form-control w-full">
+        <span class="label-text font-medium">Discogs personal access token</span>
+        <input type="text" class="input input-bordered w-full font-mono text-sm" x-model="discogsTokenInput" placeholder="" autocomplete="off" spellcheck="false">
+        <span class="label-text-alt text-base-content/50" x-show="discogsTokenSet">A token is already saved. Enter a new value to replace it.</span>
+        <span class="label-text-alt text-base-content/50" x-show="!discogsTokenSet">Required for authenticated Discogs API rate limits.</span>
+      </label>
+
+      <label class="form-control w-full">
+        <span class="label-text font-medium">GetSongBPM API key</span>
+        <input type="text" class="input input-bordered w-full font-mono text-sm" x-model="getBpmApiKeyInput" placeholder="" autocomplete="off" spellcheck="false">
+        <span class="label-text-alt text-base-content/50" x-show="getSongBpmKeySet">A key is already saved. Enter a new value to replace it.</span>
+      </label>
+
+      <div class="card-actions justify-end mt-2">
+        <button type="button" class="btn btn-primary" :disabled="saving" @click="save()">
+          <span x-show="saving" class="loading loading-spinner loading-sm"></span>
+          <span x-show="!saving">Save</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-8 text-xs text-base-content/50 space-y-1">
+    <p><strong>Headers (optional overrides on each API request):</strong></p>
+    <ul class="list-disc list-inside font-mono">
+      <li>X-Moozhak-Discogs-Token</li>
+      <li>X-Moozhak-Discogs-Username</li>
+      <li>X-Moozhak-GetSongBpm-Key</li>
+    </ul>
+  </div>
+</div>

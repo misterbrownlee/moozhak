@@ -15,6 +15,7 @@ import {
   jest,
 } from '@jest/globals';
 import request from 'supertest';
+import { withMoozhakCredentials } from './testCredentials.js';
 
 /** @type {string} */
 let tmpDir;
@@ -163,7 +164,9 @@ describe('POST /api/library/:id/bpm', () => {
       .expect(201);
 
     const id = create.body.id;
-    const res = await request(app).post(`/api/library/${id}/bpm`).expect(200);
+    const res = await withMoozhakCredentials(
+      request(app).post(`/api/library/${id}/bpm`),
+    ).expect(200);
 
     expect(res.body.success).toBe(true);
     expect(res.body.item.sides[0].tracks[0].bpm).toBe(120);
@@ -230,5 +233,34 @@ describe('Export and import', () => {
       .get('/api/collection/export')
       .expect(200);
     expect(exported.body.username).toBe('tester');
+  });
+});
+
+describe('GET /api/settings and PUT /api/settings', () => {
+  it('GET returns shape with unset secrets', async () => {
+    const res = await request(app).get('/api/settings').expect(200);
+    expect(res.body).toEqual({
+      discogsUsername: '',
+      discogsTokenSet: false,
+      getSongBpmKeySet: false,
+    });
+  });
+
+  it('PUT persists username and secret flags without echoing secrets', async () => {
+    await request(app)
+      .put('/api/settings')
+      .send({
+        discogsUsername: 'myuser',
+        discogsToken: 'secret-token',
+        getBpmApiKey: 'secret-bpm',
+      })
+      .expect(200);
+
+    const res = await request(app).get('/api/settings').expect(200);
+    expect(res.body.discogsUsername).toBe('myuser');
+    expect(res.body.discogsTokenSet).toBe(true);
+    expect(res.body.getSongBpmKeySet).toBe(true);
+    expect(res.body.discogsToken).toBeUndefined();
+    expect(res.body.getBpmApiKey).toBeUndefined();
   });
 });

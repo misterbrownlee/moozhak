@@ -23,11 +23,24 @@ import {
 const GETSONGBPM_BASE_URL = 'https://api.getsong.co';
 
 /**
- * Get API key from config
- * @returns {string|null} API key or null if not configured
+ * @returns {string|null} API key from file config only
  */
-function getApiKey() {
-  return fileConfig.GETBPM_API_KEY || null;
+function getApiKeyFromFile() {
+  const v = fileConfig.GETBPM_API_KEY?.trim();
+  return v || null;
+}
+
+/**
+ * @param {string|null|undefined} explicitApiKey - If not `undefined`, sole source (trimmed). If `undefined`, use file config.
+ * @returns {string|null}
+ */
+function resolveEffectiveApiKey(explicitApiKey) {
+  if (explicitApiKey !== undefined) {
+    if (explicitApiKey === null || explicitApiKey === '') return null;
+    const t = String(explicitApiKey).trim();
+    return t || null;
+  }
+  return getApiKeyFromFile();
 }
 
 /**
@@ -37,15 +50,16 @@ function getApiKey() {
  * @param {Object} [options] - Request options
  * @param {boolean} [options.skipRateLimit=false] - Skip rate limiting (for internal use)
  * @param {boolean} [options.verbose=false] - Log rate limit info
+ * @param {string|null|undefined} [options.apiKey] - Explicit key (web); omit for file config only
  * @returns {Promise<Object|null>} Response data or null on error
  */
 async function makeRequest(endpoint, params = {}, options = {}) {
-  const { skipRateLimit = false, verbose = false } = options;
-  const apiKey = getApiKey();
+  const { skipRateLimit = false, verbose = false, apiKey: apiKeyOpt } = options;
+  const apiKey = resolveEffectiveApiKey(apiKeyOpt);
 
   if (!apiKey) {
     log.error(
-      'GetSongBPM: No API key configured. Set GETBPM_API_KEY in .mzkconfig',
+      'GetSongBPM: No API key configured. Set it in app Settings or pass the client header.',
     );
     return { error: 'no_api_key' };
   }
@@ -117,7 +131,7 @@ async function makeRequest(endpoint, params = {}, options = {}) {
  * // Returns: { search: [{ id, title, tempo, artist, ... }] }
  */
 export async function searchSong(artist, title, options = {}) {
-  const { limit, verbose = false } = options;
+  const { limit, verbose = false, apiKey } = options;
 
   if (verbose) {
     log.debug(`GetSongBPM: Searching for "${artist}" - "${title}"`);
@@ -130,7 +144,7 @@ export async function searchSong(artist, title, options = {}) {
     params.limit = limit;
   }
 
-  const data = await makeRequest('/search/', params, { verbose });
+  const data = await makeRequest('/search/', params, { verbose, apiKey });
 
   if (verbose && data && !data.error) {
     const count = data.search?.length || 0;
@@ -243,7 +257,7 @@ export async function getArtist(artistId, verbose = false) {
  * Convenience method that searches and returns the best match with BPM
  * @param {string} artist - Artist name
  * @param {string} title - Song title
- * @param {boolean} [verbose=false] - Whether to log verbose output
+ * @param {boolean|Object} [third=false] - Verbose flag, or `{ verbose?, apiKey? }` for web overrides
  * @returns {Promise<Object>} Result with BPM info or error
  *
  * @example
@@ -254,8 +268,10 @@ export async function getArtist(artistId, verbose = false) {
  * //   song: { id, title, tempo, key_of, time_sig, ... }
  * // }
  */
-export async function findBpm(artist, title, verbose = false) {
-  const searchResult = await searchSong(artist, title, { verbose });
+export async function findBpm(artist, title, third = false) {
+  const opts = typeof third === 'boolean' ? { verbose: third } : third || {};
+  const { verbose = false, apiKey } = opts;
+  const searchResult = await searchSong(artist, title, { verbose, apiKey });
 
   if (!searchResult || searchResult.error) {
     return {
@@ -338,10 +354,11 @@ export function formatBpmResult(result, format = 'human') {
 
 /**
  * Check if API key is configured
+ * @param {string|null|undefined} [apiKey] - If not `undefined`, check this key only; else file config
  * @returns {boolean} True if API key is set
  */
-export function isConfigured() {
-  return Boolean(getApiKey());
+export function isConfigured(apiKey) {
+  return Boolean(resolveEffectiveApiKey(apiKey));
 }
 
 /**
@@ -350,6 +367,7 @@ export function isConfigured() {
  * @param {Array<{title: string, position?: string}>} tracks - Array of track objects with title
  * @param {Object} [options] - Options
  * @param {boolean} [options.verbose=false] - Whether to log verbose output
+ * @param {string|null|undefined} [options.apiKey] - Explicit key (web); omit for file config only
  * @returns {Promise<Object>} Results object with track BPM data
  *
  * @example
@@ -368,9 +386,9 @@ export function isConfigured() {
  * // }
  */
 export async function lookupAlbumBpm(artist, tracks, options = {}) {
-  const { verbose = false } = options;
+  const { verbose = false, apiKey } = options;
 
-  if (!isConfigured()) {
+  if (!isConfigured(apiKey)) {
     return {
       success: false,
       error: 'no_api_key',
@@ -426,7 +444,7 @@ export async function lookupAlbumBpm(artist, tracks, options = {}) {
       continue;
     }
 
-    const bpmResult = await findBpm(artist, track.title, verbose);
+    const bpmResult = await findBpm(artist, track.title, { verbose, apiKey });
 
     if (bpmResult.error === 'rate_limited') {
       // Rate limited - record and continue (don't fail the whole batch)

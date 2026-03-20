@@ -1,4 +1,5 @@
 <%# Collection Page %>
+<%- include('partials/discogs-config-warning') %>
 
 <div x-init="loadCollection()">
   <div class="flex justify-between items-center mb-6">
@@ -46,7 +47,7 @@
     <div class="text-center py-12">
       <p class="text-lg text-base-content/60">No collection synced yet.</p>
       <p class="text-sm text-base-content/40 mt-2">Click "Update Collection" to fetch your Discogs collection.</p>
-      <p class="text-xs text-base-content/40 mt-1">Make sure DISCOGS_USERNAME is set in your .mzkconfig file.</p>
+      <p class="text-xs text-base-content/40 mt-1">Set your Discogs username and token in <a href="/settings" class="link">Settings</a>, or pass credential headers on API requests.</p>
     </div>
   </template>
 
