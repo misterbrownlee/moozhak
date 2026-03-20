@@ -83,8 +83,8 @@ npm run web:css:watch   # Watch and rebuild CSS (aliases: css:watch)
 | `/api/collection/export` | GET | Export cached collection JSON (404 if none) |
 | `/api/collection/import` | POST | Replace collection cache from JSON body (same shape as export) |
 | `/api/collection/sync` | POST | Sync collection from Discogs |
-| `/api/settings` | GET | Public settings shape (`discogsUsername`, `discogsTokenSet`, `getSongBpmKeySet`; secrets are never returned) |
-| `/api/settings` | PUT | Update defaults; JSON body may include `discogsToken`, `discogsUsername`, `getBpmApiKey` (omit or empty string to clear a stored value when that field is sent) |
+| `/api/settings` | GET | Settings editor shape: `discogsUsername`, `discogsToken`, `getBpmApiKey`, plus `discogsTokenSet` / `getSongBpmKeySet` flags (full secrets included for the local Settings UI—avoid exposing this endpoint beyond trusted use) |
+| `/api/settings` | PUT | Update defaults; JSON body may include `discogsToken`, `discogsUsername`, `getBpmApiKey` (empty string clears that stored value when the field is sent) |
 | `/api/log` | POST | Log client-side user actions |
 
 ## API credentials (Discogs + GetSongBPM)

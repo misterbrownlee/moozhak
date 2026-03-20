@@ -19,7 +19,7 @@ import {
 } from '../../core/services/getsongbpm.js';
 import {
   APP_SETTING_KEYS,
-  getPublicSettingsShape,
+  getSettingsEditorShape,
   resolveDiscogsUsernameFromRequest,
   resolveGetSongBpmApiKeyFromRequest,
   setAppSettings,
@@ -378,7 +378,7 @@ router.delete(
 router.get(
   '/settings',
   asyncHandler(async (_req, res) => {
-    res.json(getPublicSettingsShape());
+    res.json(getSettingsEditorShape());
   }),
 );
 
@@ -404,7 +404,7 @@ router.put(
     }
     setAppSettings(patch);
     logUserAction('settings_update', { keys: Object.keys(patch) });
-    res.json({ success: true, settings: getPublicSettingsShape() });
+    res.json({ success: true, settings: getSettingsEditorShape() });
   }),
 );
 

@@ -40,14 +40,23 @@ export function setAppSettings(partial) {
 }
 
 /**
- * @returns {Record<string, string>}
+ * Full values for the Settings page (local app only—treat as sensitive).
+ * @returns {{
+ *   discogsUsername: string,
+ *   discogsToken: string,
+ *   getBpmApiKey: string,
+ *   discogsTokenSet: boolean,
+ *   getSongBpmKeySet: boolean,
+ * }}
  */
-export function getPublicSettingsShape() {
+export function getSettingsEditorShape() {
   const token = getAppSetting(APP_SETTING_KEYS.DISCOGS_TOKEN);
   const username = getAppSetting(APP_SETTING_KEYS.DISCOGS_USERNAME);
   const bpm = getAppSetting(APP_SETTING_KEYS.GETBPM_API_KEY);
   return {
     discogsUsername: username ?? '',
+    discogsToken: token ?? '',
+    getBpmApiKey: bpm ?? '',
     discogsTokenSet: Boolean(token),
     getSongBpmKeySet: Boolean(bpm),
   };

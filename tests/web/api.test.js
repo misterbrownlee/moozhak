@@ -237,16 +237,18 @@ describe('Export and import', () => {
 });
 
 describe('GET /api/settings and PUT /api/settings', () => {
-  it('GET returns shape with unset secrets', async () => {
+  it('GET returns editor shape with empty secrets', async () => {
     const res = await request(app).get('/api/settings').expect(200);
     expect(res.body).toEqual({
       discogsUsername: '',
+      discogsToken: '',
+      getBpmApiKey: '',
       discogsTokenSet: false,
       getSongBpmKeySet: false,
     });
   });
 
-  it('PUT persists username and secret flags without echoing secrets', async () => {
+  it('PUT persists values and GET echoes them for the settings UI', async () => {
     await request(app)
       .put('/api/settings')
       .send({
@@ -258,9 +260,9 @@ describe('GET /api/settings and PUT /api/settings', () => {
 
     const res = await request(app).get('/api/settings').expect(200);
     expect(res.body.discogsUsername).toBe('myuser');
+    expect(res.body.discogsToken).toBe('secret-token');
+    expect(res.body.getBpmApiKey).toBe('secret-bpm');
     expect(res.body.discogsTokenSet).toBe(true);
     expect(res.body.getSongBpmKeySet).toBe(true);
-    expect(res.body.discogsToken).toBeUndefined();
-    expect(res.body.getBpmApiKey).toBeUndefined();
   });
 });

@@ -469,6 +469,8 @@ function moozhakSettingsPage() {
         throw new Error(data.error || 'Failed to load settings');
       }
       this.discogsUsername = data.discogsUsername || '';
+      this.discogsTokenInput = data.discogsToken ?? '';
+      this.getBpmApiKeyInput = data.getBpmApiKey ?? '';
       this.discogsTokenSet = Boolean(data.discogsTokenSet);
       this.getSongBpmKeySet = Boolean(data.getSongBpmKeySet);
     },
@@ -485,13 +487,11 @@ function moozhakSettingsPage() {
       this.saving = true;
       this.bannerMessage = '';
       try {
-        const body = { discogsUsername: this.discogsUsername };
-        if (this.discogsTokenInput.trim()) {
-          body.discogsToken = this.discogsTokenInput.trim();
-        }
-        if (this.getBpmApiKeyInput.trim()) {
-          body.getBpmApiKey = this.getBpmApiKeyInput.trim();
-        }
+        const body = {
+          discogsUsername: this.discogsUsername,
+          discogsToken: this.discogsTokenInput.trim(),
+          getBpmApiKey: this.getBpmApiKeyInput.trim(),
+        };
         const response = await fetch('/api/settings', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -506,8 +506,6 @@ function moozhakSettingsPage() {
         if (!response.ok) {
           throw new Error(data.error || 'Save failed');
         }
-        this.discogsTokenInput = '';
-        this.getBpmApiKeyInput = '';
         await this.reloadFromServer();
         this.showBanner('Settings saved.', 'success');
       } catch (error) {
