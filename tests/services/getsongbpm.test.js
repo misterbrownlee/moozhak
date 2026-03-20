@@ -433,6 +433,51 @@ describe('GetSongBPM API', () => {
 
       expect(result.song.id).toBe('first');
     });
+
+    it('accepts API returning a single song object instead of an array (no songs.find crash)', async () => {
+      const singleObject = {
+        search: {
+          id: 'solo',
+          title: 'Lonely Hit',
+          tempo: '99',
+          key_of: 'Cm',
+          time_sig: '4/4',
+          artist: { name: 'Solo Artist' },
+        },
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => singleObject,
+      });
+
+      const result = await findBpm('Solo Artist', 'Lonely Hit');
+
+      expect(result.found).toBe(true);
+      expect(result.bpm).toBe(99);
+      expect(result.song.id).toBe('solo');
+    });
+
+    it('accepts single search object missing tempo (found but bpm null)', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          search: {
+            id: 'n',
+            title: 'No Tempo',
+            artist: { name: 'Artist' },
+          },
+        }),
+      });
+
+      const result = await findBpm('Artist', 'No Tempo');
+
+      expect(result.found).toBe(true);
+      expect(result.bpm).toBeNull();
+      expect(result.song.title).toBe('No Tempo');
+    });
   });
 
   describe('lookupAlbumBpm', () => {

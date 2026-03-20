@@ -203,6 +203,18 @@ export async function searchArtist(name, options = {}) {
 }
 
 /**
+ * GetSongBPM /search/ usually returns `search` as an array; some responses use a single object.
+ * @param {unknown} search - `data.search` from API JSON
+ * @returns {Array<Record<string, unknown>>}
+ */
+function normalizeSearchSongs(search) {
+  if (search == null) return [];
+  if (Array.isArray(search)) return search;
+  if (typeof search === 'object') return [search];
+  return [];
+}
+
+/**
  * Get song details by ID
  * @param {string} songId - GetSongBPM song ID
  * @param {boolean} [verbose=false] - Whether to log verbose output
@@ -281,7 +293,7 @@ export async function findBpm(artist, title, third = false) {
     };
   }
 
-  const songs = searchResult.search || [];
+  const songs = normalizeSearchSongs(searchResult.search);
 
   if (songs.length === 0) {
     return {
