@@ -1,0 +1,129 @@
+<%# Collection Page %>
+
+<div x-init="loadCollection()">
+  <div class="flex justify-between items-center mb-6">
+    <div class="flex items-center gap-4">
+      <h2 class="text-2xl font-bold">Discogs Collection</h2>
+      <template x-if="collectionMetadata">
+        <span class="badge badge-lg badge-secondary" x-text="collectionMetadata.totalItems + ' releases'"></span>
+      </template>
+    </div>
+    <div class="flex items-center gap-2">
+      <template x-if="collection.length > 0">
+        <%- include('partials/view-toggle') %>
+      </template>
+      <button 
+        @click="syncCollection()" 
+        class="btn btn-primary btn-sm"
+        :disabled="collectionLoading"
+      >
+        <span x-show="collectionLoading" class="loading loading-spinner loading-xs"></span>
+        <span x-show="!collectionLoading">🔄</span>
+        Update Collection
+      </button>
+    </div>
+  </div>
+
+  <!-- Sync Info -->
+  <template x-if="collectionMetadata">
+    <div class="text-sm text-base-content/60 mb-4">
+      <span x-text="'Last synced: ' + new Date(collectionMetadata.syncedAt).toLocaleString()"></span>
+      <span class="mx-2">•</span>
+      <span x-text="'@' + collectionMetadata.username"></span>
+    </div>
+  </template>
+
+  <!-- Loading State -->
+  <template x-if="collectionLoading && collection.length === 0">
+    <div class="text-center py-12">
+      <span class="loading loading-spinner loading-lg text-primary"></span>
+      <p class="mt-4 text-base-content/60">Loading collection...</p>
+    </div>
+  </template>
+
+  <!-- Empty State -->
+  <template x-if="!collectionLoading && collection.length === 0">
+    <div class="text-center py-12">
+      <p class="text-lg text-base-content/60">No collection synced yet.</p>
+      <p class="text-sm text-base-content/40 mt-2">Click "Update Collection" to fetch your Discogs collection.</p>
+      <p class="text-xs text-base-content/40 mt-1">Make sure DISCOGS_USERNAME is set in your .mzkconfig file.</p>
+    </div>
+  </template>
+
+  <!-- Collection Items -->
+  <template x-if="collection.length > 0">
+    <div>
+      <!-- Card View -->
+      <div x-show="viewMode === 'cards'" class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <template x-for="item in collection" :key="item.instanceId">
+          <div class="card relative overflow-hidden shadow-md hover:shadow-lg transition-shadow cursor-pointer aspect-square rounded-lg" @click="viewCollectionItem(item)">
+            <figure class="absolute inset-0">
+              <template x-if="item.cover || item.thumb">
+                <img :src="item.cover || item.thumb" :alt="item.title" class="w-full h-full object-cover">
+              </template>
+              <template x-if="!item.cover && !item.thumb">
+                <div class="w-full h-full bg-base-300 flex items-center justify-center text-6xl">💿</div>
+              </template>
+            </figure>
+            <div class="card-body absolute bottom-[1rem] left-[8px] right-[8px] bg-base-100/40 backdrop-blur-sm p-4 rounded-lg">
+              <h3 class="card-title text-base line-clamp-1 text-[#d3d7e1]">
+                <span x-text="item.title"></span>
+                <template x-if="item.year">
+                  <span x-text="' (' + item.year + ')'"></span>
+                </template>
+              </h3>
+              <p class="text-sm line-clamp-1 text-[#d3d7e1]" x-text="item.artist"></p>
+              <div class="card-actions justify-end mt-2" @click.stop>
+                <template x-if="libraryCache.some(lib => String(lib.discogsId) === String(item.discogsId))">
+                  <span class="btn btn-xs bg-transparent text-[rgb(0_255_0/38%)]">✓ In Library</span>
+                </template>
+                <template x-if="!libraryCache.some(lib => String(lib.discogsId) === String(item.discogsId))">
+                  <button @click="quickAdd('release', item.discogsId)" class="btn btn-xs btn-primary">
+                    + Library
+                  </button>
+                </template>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <!-- List View -->
+      <div x-show="viewMode === 'list'" class="grid gap-4">
+        <template x-for="item in collection" :key="item.instanceId">
+          <div class="card card-side bg-base-100 shadow-md hover:shadow-lg transition-shadow cursor-pointer" @click="viewCollectionItem(item)">
+            <figure class="w-24 h-24 flex-shrink-0 m-4">
+              <template x-if="item.cover || item.thumb">
+                <img :src="item.thumb || item.cover" :alt="item.title" class="rounded-lg w-full h-full object-cover">
+              </template>
+              <template x-if="!item.cover && !item.thumb">
+                <div class="rounded-lg w-full h-full bg-base-300 flex items-center justify-center">
+                  <span class="text-2xl">💿</span>
+                </div>
+              </template>
+            </figure>
+            <div class="card-body py-4">
+              <h3 class="card-title text-base line-clamp-1">
+                <span x-text="item.title"></span>
+                <template x-if="item.year">
+                  <span x-text="' (' + item.year + ')'"></span>
+                </template>
+              </h3>
+              <p class="text-sm text-base-content/70" x-text="item.artist"></p>
+              <div class="card-actions justify-end mt-2" @click.stop>
+                <template x-if="libraryCache.some(lib => String(lib.discogsId) === String(item.discogsId))">
+                  <span class="btn btn-xs btn-disabled">In Library ✓</span>
+                </template>
+                <template x-if="!libraryCache.some(lib => String(lib.discogsId) === String(item.discogsId))">
+                  <button @click="quickAdd('release', item.discogsId)" class="btn btn-xs btn-primary">
+                    Add to Library
+                  </button>
+                </template>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </template>
+</div>

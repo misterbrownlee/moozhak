@@ -1,0 +1,33 @@
+<%#
+  View Toggle Partial - Toggle between card and list views
+%>
+<div class="join">
+  <button 
+    @click="setViewMode('cards')" 
+    :class="viewMode === 'cards' ? 'btn btn-sm btn-active join-item' : 'btn btn-sm join-item'"
+    title="Card View"
+  >
+    <!-- Grid/Cards icon -->
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+      <rect x="14" y="14" width="7" height="7" rx="1" />
+    </svg>
+  </button>
+  <button 
+    @click="setViewMode('list')" 
+    :class="viewMode === 'list' ? 'btn btn-sm btn-active join-item' : 'btn btn-sm join-item'"
+    title="List View"
+  >
+    <!-- List icon -->
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <line x1="8" y1="6" x2="21" y2="6" />
+      <line x1="8" y1="12" x2="21" y2="12" />
+      <line x1="8" y1="18" x2="21" y2="18" />
+      <circle cx="4" cy="6" r="1.5" fill="currentColor" />
+      <circle cx="4" cy="12" r="1.5" fill="currentColor" />
+      <circle cx="4" cy="18" r="1.5" fill="currentColor" />
+    </svg>
+  </button>
+</div>

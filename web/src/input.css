@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Alpine.js cloak - hide elements until Alpine initializes */
+[x-cloak] {
+  display: none !important;
+}
+
+/* Print styles for track cards */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .print-card {
+    page-break-inside: avoid;
+    border: 1px solid #ccc;
+    padding: 1rem;
+    margin: 0;
+  }
+
+  .print-card table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .print-card th,
+  .print-card td {
+    border: 1px solid #ccc;
+    padding: 0.5rem;
+    text-align: left;
+  }
+
+  .print-card th {
+    background: #f0f0f0;
+  }
+}
+
+/* Hide print-only elements by default */
+.print-only {
+  display: none;
+}

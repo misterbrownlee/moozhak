@@ -1,0 +1,23 @@
+<%#
+  Badge Partial
+  Params:
+    - text: badge content
+    - variant: 'default' | 'ghost' | 'outline' | 'sm' | 'sm-ghost' | 'sm-outline' | 'lg' | 'lg-outline'
+%>
+<%
+  const variants = {
+    default: 'badge',
+    ghost: 'badge badge-ghost',
+    outline: 'badge badge-outline',
+    sm: 'badge badge-sm',
+    'sm-ghost': 'badge badge-sm badge-ghost',
+    'sm-outline': 'badge badge-sm badge-outline',
+    lg: 'badge badge-lg',
+    'lg-outline': 'badge badge-lg badge-outline'
+  };
+  const badgeVariant = typeof variant !== 'undefined' ? variant : 'default';
+  const className = variants[badgeVariant] || variants.default;
+%>
+<% if (text) { %>
+<span class="<%= className %>"><%= text %></span>
+<% } %>

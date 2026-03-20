@@ -1,0 +1,37 @@
+<%#
+  Search Result Card Partial
+  Params:
+    - result: search result object (id, title, type, year, thumb)
+    - inLibrary: boolean - whether item is already in library
+%>
+<%
+  const type = result.type || 'release';
+  const title = result.title || 'Unknown Title';
+  const year = result.year || '';
+  const thumb = result.thumb || result.cover_image || '';
+  const cover = result.cover_image || thumb;
+  const id = result.id;
+%>
+<div class="card card-side bg-base-100 shadow-md hover:shadow-lg transition-shadow cursor-pointer" @click="viewDetails('<%= type %>', <%= id %>)">
+  <figure class="w-24 h-24 flex-shrink-0 m-4">
+    <%- include('album-image', { thumb, cover, title, size: 'sm' }) %>
+  </figure>
+  <div class="card-body py-4">
+    <h3 class="card-title text-base"><%= title %><% if (year) { %> (<%= year %>)<% } %></h3>
+    <p class="text-sm text-base-content/70">
+      <%- include('badge', { text: type, variant: 'sm' }) %>
+    </p>
+    <div class="card-actions justify-end mt-2" @click.stop>
+      <% if (inLibrary) { %>
+        <span class="btn btn-sm btn-disabled">In Library ✓</span>
+      <% } else { %>
+        <button 
+          @click="quickAdd('<%= type %>', <%= id %>)" 
+          class="btn btn-sm btn-primary"
+        >
+          Add to Library
+        </button>
+      <% } %>
+    </div>
+  </div>
+</div>

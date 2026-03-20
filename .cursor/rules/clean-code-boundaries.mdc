@@ -1,0 +1,30 @@
+---
+description: Enforce separation of concerns and single-operation functions during refactors.
+alwaysApply: true
+---
+
+# Clean Code Boundaries
+
+- Prefer small modules with one clear responsibility.
+- Keep transport and framework concerns at edges:
+  - `core/` contains domain logic and external service wrappers.
+  - `web/server/` contains HTTP routing/controller orchestration.
+  - `web/client/` contains UI state and presentation behavior.
+- Do not place Express or filesystem logic in reusable `core` modules.
+- Keep functions focused on one operation; split when a function both transforms data and performs side effects.
+- Favor explicit input/output contracts at module boundaries.
+- Remove dead code and unused exports during refactor steps.
+- Preserve behavior while improving structure; avoid broad rewrites without validation.
+
+## Example
+
+```js
+// Bad: mixes HTTP concerns with domain transformation
+export async function handler(req, res) { /* ...normalize + fetch + respond... */ }
+
+// Good: thin transport wrapper around reusable operation
+export async function handler(req, res) {
+  const result = await buildLibraryCard(req.body, services);
+  res.json(result);
+}
+```

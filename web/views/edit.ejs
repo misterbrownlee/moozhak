@@ -1,0 +1,615 @@
+<%# Edit Library Item Page %>
+
+<div class="max-w-4xl mx-auto" x-data="editPage()" x-init="init()">
+  <!-- Header -->
+  <div class="flex justify-between items-center mb-6">
+    <div class="flex items-center gap-4">
+      <a href="/library" class="btn btn-ghost btn-sm">← Back</a>
+      <h2 class="text-2xl font-bold">Edit Album</h2>
+    </div>
+    <div class="flex gap-2">
+      <a href="/library" class="btn btn-ghost">Cancel</a>
+      <button @click="saveChanges()" class="btn btn-primary" :disabled="saving">
+        <span x-show="saving" class="loading loading-spinner loading-sm"></span>
+        Save Changes
+      </button>
+    </div>
+  </div>
+
+  <!-- Album Info Section -->
+  <div class="card bg-base-100 shadow-md mb-6">
+    <div class="card-body">
+      <h3 class="card-title text-lg mb-4">Album Information</h3>
+      
+      <div class="flex flex-col md:flex-row gap-6">
+        <!-- Album Cover -->
+        <div class="flex-shrink-0">
+          <% if (item.cover || item.thumb) { %>
+            <img src="<%= item.cover || item.thumb %>" alt="<%= item.title %>" class="w-40 h-40 object-cover rounded-lg shadow">
+          <% } else { %>
+            <div class="w-40 h-40 bg-base-300 rounded-lg flex items-center justify-center text-4xl">🎵</div>
+          <% } %>
+        </div>
+        
+        <!-- Album Fields -->
+        <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="form-control">
+            <label class="label"><span class="label-text">Title</span></label>
+            <input type="text" x-model="form.title" class="input input-bordered" required>
+          </div>
+          <div class="form-control">
+            <label class="label"><span class="label-text">Artist</span></label>
+            <input type="text" x-model="form.artist" class="input input-bordered" required>
+          </div>
+          <div class="form-control">
+            <label class="label"><span class="label-text">Year</span></label>
+            <input type="text" x-model="form.year" class="input input-bordered">
+          </div>
+          <div class="form-control">
+            <label class="label"><span class="label-text">Format</span></label>
+            <input type="text" x-model="form.format" class="input input-bordered">
+          </div>
+          <div class="form-control md:col-span-2">
+            <label class="label"><span class="label-text">Notes</span></label>
+            <textarea x-model="form.notes" class="textarea textarea-bordered h-20" placeholder="Personal notes..."></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tracks Section -->
+  <div class="card bg-base-100 shadow-md">
+    <div class="card-body">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="card-title text-lg">Tracks</h3>
+        <button @click="addSide()" class="btn btn-sm btn-outline">+ Add Side</button>
+      </div>
+
+      <!-- Sides -->
+      <template x-for="(side, sideIndex) in form.sides" :key="sideIndex">
+        <div class="mb-6 last:mb-0">
+          <!-- Side Divider -->
+          <hr class="border-base-content/20 mb-3">
+          <!-- Side Header -->
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-medium">Side</span>
+              <input type="text" x-model="side.label" class="input input-bordered input-sm w-12" placeholder="A">
+              <button @click="addTrack(sideIndex)" class="btn btn-xs btn-ghost">+ Add Track</button>
+              <button @click="openBulkBpmLookup(sideIndex)" class="btn btn-xs btn-ghost" title="Get BPM data for all tracks"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M10.5 3.75a6 6 0 0 0-5.98 6.496A5.25 5.25 0 0 0 6.75 20.25H18a4.5 4.5 0 0 0 2.206-8.423 3.75 3.75 0 0 0-4.133-4.303A6.001 6.001 0 0 0 10.5 3.75Zm2.03 5.47a.75.75 0 0 0-1.06 0l-3 3a.75.75 0 1 0 1.06 1.06l1.72-1.72v4.69a.75.75 0 0 0 1.5 0v-4.69l1.72 1.72a.75.75 0 1 0 1.06-1.06l-3-3Z" clip-rule="evenodd" /></svg></button>
+            </div>
+            <button @click="removeSide(sideIndex)" class="btn btn-xs btn-ghost text-error" x-show="form.sides.length > 1">Remove Side</button>
+          </div>
+
+          <!-- Tracks Table -->
+          <div class="overflow-x-auto">
+            <table class="table table-sm">
+              <thead>
+                <tr class="text-xs">
+                  <th class="w-16">Position</th>
+                  <th>Title</th>
+                  <th class="w-16">Duration</th>
+                  <th class="w-20">BPM</th>
+                  <th class="w-16">Key</th>
+                  <th class="w-16">Signature</th>
+                  <th class="w-8"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="(track, trackIndex) in side.tracks" :key="trackIndex">
+                  <tr class="hover">
+                    <td>
+                      <input type="text" x-model="track.position" class="input input-bordered input-xs w-full" placeholder="A1">
+                    </td>
+                    <td>
+                      <input type="text" x-model="track.title" class="input input-bordered input-xs w-full" placeholder="Track title">
+                    </td>
+                    <td>
+                      <input type="text" x-model="track.duration" class="input input-bordered input-xs w-full" placeholder="3:45">
+                    </td>
+                    <td>
+                      <div class="flex items-center gap-0.5">
+                        <input type="number" x-model="track.bpm" class="input input-bordered input-xs w-12">
+                        <button type="button" @click="openBpmLookup(sideIndex, trackIndex)" class="btn btn-xs btn-ghost px-0.5" title="Look up BPM"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M10.5 3.75a6 6 0 0 0-5.98 6.496A5.25 5.25 0 0 0 6.75 20.25H18a4.5 4.5 0 0 0 2.206-8.423 3.75 3.75 0 0 0-4.133-4.303A6.001 6.001 0 0 0 10.5 3.75Zm2.03 5.47a.75.75 0 0 0-1.06 0l-3 3a.75.75 0 1 0 1.06 1.06l1.72-1.72v4.69a.75.75 0 0 0 1.5 0v-4.69l1.72 1.72a.75.75 0 1 0 1.06-1.06l-3-3Z" clip-rule="evenodd" /></svg></button>
+                      </div>
+                    </td>
+                    <td>
+                      <input type="text" x-model="track.key" class="input input-bordered input-xs w-full">
+                    </td>
+                    <td>
+                      <input type="text" x-model="track.timeSignature" class="input input-bordered input-xs w-full">
+                    </td>
+                    <td>
+                      <button @click="removeTrack(sideIndex, trackIndex)" class="btn btn-xs btn-ghost text-error" title="Remove track">×</button>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+          
+          <template x-if="side.tracks.length === 0">
+            <p class="text-sm text-base-content/50 italic py-2">No tracks on this side. Click "+ Add Track" to add one.</p>
+          </template>
+        </div>
+      </template>
+
+      <template x-if="form.sides.length === 0">
+        <p class="text-base-content/50 italic">No sides defined. Click "+ Add Side" to get started.</p>
+      </template>
+    </div>
+  </div>
+
+  <!-- Bottom Actions -->
+  <div class="flex justify-end gap-2 mt-6">
+    <a href="/library" class="btn btn-ghost">Cancel</a>
+    <button @click="saveChanges()" class="btn btn-primary" :disabled="saving">
+      <span x-show="saving" class="loading loading-spinner loading-sm"></span>
+      Save Changes
+    </button>
+  </div>
+
+  <!-- BPM Lookup Modal -->
+  <dialog id="bpm-lookup-modal" class="modal" x-ref="bpmLookupModal">
+    <div class="modal-box w-11/12 max-w-3xl">
+      <h3 class="font-bold text-lg mb-4" x-text="bpmLookup.bulkMode ? 'Look Up BPM - All Tracks' : 'Look Up BPM'"></h3>
+      
+      <!-- Single Track Mode -->
+      <template x-if="!bpmLookup.bulkMode">
+        <div>
+          <!-- Track Info -->
+          <template x-if="bpmLookup.track">
+            <div class="mb-4 p-3 bg-base-200 rounded-lg">
+              <p class="font-semibold" x-text="bpmLookup.track.title || 'Untitled'"></p>
+              <p class="text-sm text-base-content/60" x-text="form.artist"></p>
+            </div>
+          </template>
+
+          <!-- Loading State -->
+          <template x-if="bpmLookup.loading">
+            <div class="py-6 text-center">
+              <span class="loading loading-spinner loading-lg text-primary"></span>
+              <p class="mt-2 text-base-content/70">Searching GetSongBPM.com...</p>
+            </div>
+          </template>
+
+          <!-- Error State -->
+          <template x-if="!bpmLookup.loading && bpmLookup.error">
+            <div class="py-4">
+              <div class="alert alert-warning">
+                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                <span x-text="bpmLookup.errorMessage || 'No BPM data found for this track.'"></span>
+              </div>
+            </div>
+          </template>
+
+          <!-- Result State -->
+          <template x-if="!bpmLookup.loading && !bpmLookup.error && bpmLookup.result">
+            <div class="py-4">
+              <p class="text-sm text-base-content/70 mb-3">Found on GetSongBPM:</p>
+              <div class="overflow-x-auto">
+                <table class="table table-sm">
+                  <thead>
+                    <tr>
+                      <th>Matched Title</th>
+                      <th>Artist</th>
+                      <th class="text-right">BPM</th>
+                      <th class="text-center">Key</th>
+                      <th class="text-center">Sig</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="hover">
+                      <td x-text="bpmLookup.result.matchedTitle"></td>
+                      <td class="text-base-content/70" x-text="bpmLookup.result.matchedArtist"></td>
+                      <td class="text-right font-semibold" x-text="bpmLookup.result.bpm || '--'"></td>
+                      <td class="text-center" x-text="bpmLookup.result.key || '--'"></td>
+                      <td class="text-center" x-text="bpmLookup.result.timeSignature || '--'"></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- Bulk Mode -->
+      <template x-if="bpmLookup.bulkMode">
+        <div>
+          <p class="text-sm text-base-content/70 mb-3">Looking up BPM data for all tracks on this side:</p>
+          
+          <!-- Progress -->
+          <div class="mb-4">
+            <div class="flex gap-1 w-full">
+              <template x-for="(track, idx) in bpmLookup.tracks" :key="'prog-'+idx">
+                <div 
+                  class="h-2 flex-1 rounded-sm transition-colors duration-300"
+                  :class="{
+                    'bg-base-300': track.status === 'scheduled',
+                    'bg-info': track.status === 'pending',
+                    'bg-success': track.status === 'completed',
+                    'bg-warning': track.status === 'error'
+                  }"
+                ></div>
+              </template>
+            </div>
+            <p class="text-xs text-base-content/60 mt-1">
+              Processing <span x-text="bpmLookup.tracks.filter(t => t.status !== 'scheduled').length"></span> of <span x-text="bpmLookup.tracks.length"></span> tracks...
+            </p>
+          </div>
+
+          <!-- Tracks Table -->
+          <div class="overflow-x-auto max-h-64">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th class="w-12">Pos</th>
+                  <th>Title</th>
+                  <th class="w-20">Status</th>
+                  <th class="text-right w-16">BPM</th>
+                  <th class="text-center w-16">Key</th>
+                  <th class="text-center w-16">Sig</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="(track, idx) in bpmLookup.tracks" :key="idx">
+                  <tr class="hover">
+                    <td class="text-base-content/60" x-text="track.position || idx + 1"></td>
+                    <td x-text="track.title || 'Untitled'"></td>
+                    <td class="text-xs">
+                      <template x-if="track.status === 'scheduled'">
+                        <span class="text-base-content/50">Scheduled</span>
+                      </template>
+                      <template x-if="track.status === 'pending'">
+                        <span class="text-info flex items-center"><span class="loading loading-spinner loading-xs mr-1"></span>Pending</span>
+                      </template>
+                      <template x-if="track.status === 'completed'">
+                        <span class="text-success font-medium flex items-center"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>Found</span>
+                      </template>
+                      <template x-if="track.status === 'error'">
+                        <span class="text-warning flex items-center"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>Not Found</span>
+                      </template>
+                    </td>
+                    <td class="text-right font-semibold" x-text="track.result?.bpm || '--'"></td>
+                    <td class="text-center" x-text="track.result?.key || '--'"></td>
+                    <td class="text-center" x-text="track.result?.timeSignature || '--'"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Summary -->
+          <template x-if="!bpmLookup.isRunning && bpmLookup.tracks.length > 0">
+            <div class="mt-4 text-sm text-base-content/70">
+              Found: <span class="font-semibold" x-text="bpmLookup.tracks.filter(t => t.status === 'completed').length"></span> / <span x-text="bpmLookup.tracks.length"></span> tracks
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- Actions -->
+      <div class="modal-action">
+        <button @click="closeBpmLookup()" class="btn btn-ghost">Cancel</button>
+        <template x-if="!bpmLookup.bulkMode && !bpmLookup.loading && !bpmLookup.error && bpmLookup.result">
+          <button @click="applyBpmData()" class="btn btn-primary">Apply to Track</button>
+        </template>
+        <template x-if="bpmLookup.bulkMode && !bpmLookup.isRunning && bpmLookup.tracks.some(t => t.status === 'completed')">
+          <button @click="applyBulkBpmData()" class="btn btn-primary">Save Track Data</button>
+        </template>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+      <button @click="closeBpmLookup()">close</button>
+    </form>
+  </dialog>
+</div>
+
+<script>
+function editPage() {
+  return {
+    saving: false,
+    itemId: '<%= item.id %>',
+    form: {
+      title: '<%= item.title?.replace(/'/g, "\\'") || "" %>',
+      artist: '<%= item.artist?.replace(/'/g, "\\'") || "" %>',
+      year: '<%= item.year || "" %>',
+      format: '<%= item.format?.replace(/'/g, "\\'") || "" %>',
+      notes: `<%= item.notes?.replace(/`/g, "\\`").replace(/\$/g, "\\$") || "" %>`,
+      sides: <%- JSON.stringify(item.sides || []) %>
+    },
+    
+    // BPM Lookup state
+    bpmLookup: {
+      loading: false,
+      error: false,
+      errorMessage: null,
+      result: null,
+      track: null,
+      sideIndex: null,
+      trackIndex: null,
+      // Bulk lookup state
+      bulkMode: false,
+      tracks: [], // Array of { title, position, status: 'scheduled'|'pending'|'completed'|'error', result: null }
+      currentIndex: 0,
+      isRunning: false
+    },
+
+    init() {
+      // Log page view
+      fetch('/api/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'edit_page_view', details: { id: this.itemId } })
+      }).catch(() => {});
+    },
+
+    addSide() {
+      const lastSide = this.form.sides[this.form.sides.length - 1];
+      const nextLabel = lastSide ? String.fromCharCode(lastSide.label.charCodeAt(0) + 1) : 'A';
+      this.form.sides.push({ label: nextLabel, tracks: [] });
+    },
+
+    removeSide(sideIndex) {
+      if (confirm('Remove this side and all its tracks?')) {
+        this.form.sides.splice(sideIndex, 1);
+      }
+    },
+
+    addTrack(sideIndex) {
+      const side = this.form.sides[sideIndex];
+      const lastTrack = side.tracks[side.tracks.length - 1];
+      let nextPosition = side.label + '1';
+      
+      if (lastTrack?.position) {
+        const match = lastTrack.position.match(/^([A-Za-z]+)(\d+)$/);
+        if (match) {
+          nextPosition = match[1] + (parseInt(match[2]) + 1);
+        }
+      }
+      
+      side.tracks.push({
+        position: nextPosition,
+        title: '',
+        duration: ''
+      });
+    },
+
+    removeTrack(sideIndex, trackIndex) {
+      this.form.sides[sideIndex].tracks.splice(trackIndex, 1);
+    },
+
+    // ============================================
+    // BPM Lookup
+    // ============================================
+
+    async openBpmLookup(sideIndex, trackIndex) {
+      const track = this.form.sides[sideIndex].tracks[trackIndex];
+      
+      // Reset state
+      this.bpmLookup = {
+        loading: true,
+        error: false,
+        errorMessage: null,
+        result: null,
+        track: track,
+        sideIndex: sideIndex,
+        trackIndex: trackIndex
+      };
+      
+      // Open modal
+      this.$refs.bpmLookupModal.showModal();
+      
+      // Perform lookup
+      try {
+        const response = await fetch('/api/bpm/lookup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            artist: this.form.artist,
+            title: track.title
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok || !data.success) {
+          this.bpmLookup.loading = false;
+          this.bpmLookup.error = true;
+          this.bpmLookup.errorMessage = data.message || data.error || 'Failed to look up BPM';
+          return;
+        }
+        
+        this.bpmLookup.loading = false;
+        this.bpmLookup.result = data.data;
+      } catch (error) {
+        console.error('BPM lookup error:', error);
+        this.bpmLookup.loading = false;
+        this.bpmLookup.error = true;
+        this.bpmLookup.errorMessage = 'Failed to connect to BPM service';
+      }
+    },
+
+    applyBpmData() {
+      if (!this.bpmLookup.result) return;
+      
+      const { sideIndex, trackIndex, result } = this.bpmLookup;
+      
+      // Apply the BPM data directly to the form
+      if (result.bpm != null) {
+        this.form.sides[sideIndex].tracks[trackIndex].bpm = Number(result.bpm);
+      }
+      if (result.key) {
+        this.form.sides[sideIndex].tracks[trackIndex].key = result.key;
+      }
+      if (result.timeSignature) {
+        this.form.sides[sideIndex].tracks[trackIndex].timeSignature = result.timeSignature;
+      }
+      
+      this.closeBpmLookup();
+    },
+
+    closeBpmLookup() {
+      this.$refs.bpmLookupModal.close();
+      this.bpmLookup = {
+        loading: false,
+        error: false,
+        errorMessage: null,
+        result: null,
+        track: null,
+        sideIndex: null,
+        trackIndex: null,
+        bulkMode: false,
+        tracks: [],
+        currentIndex: 0,
+        isRunning: false
+      };
+    },
+
+    // ============================================
+    // Bulk BPM Lookup
+    // ============================================
+
+    async openBulkBpmLookup(sideIndex) {
+      const side = this.form.sides[sideIndex];
+      
+      // Prepare tracks for bulk lookup
+      const tracks = side.tracks.map((track, idx) => ({
+        position: track.position,
+        title: track.title,
+        trackIndex: idx,
+        status: 'scheduled', // scheduled, pending, completed, error
+        result: null
+      }));
+      
+      // Reset state for bulk mode
+      this.bpmLookup = {
+        loading: false,
+        error: false,
+        errorMessage: null,
+        result: null,
+        track: null,
+        sideIndex: sideIndex,
+        trackIndex: null,
+        bulkMode: true,
+        tracks: tracks,
+        currentIndex: 0,
+        isRunning: true
+      };
+      
+      // Open modal
+      this.$refs.bpmLookupModal.showModal();
+      
+      // Start processing tracks with delay
+      await this.runBulkLookup();
+    },
+
+    async runBulkLookup() {
+      const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+      
+      for (let i = 0; i < this.bpmLookup.tracks.length; i++) {
+        const track = this.bpmLookup.tracks[i];
+        
+        // Skip tracks without titles
+        if (!track.title) {
+          track.status = 'error';
+          track.result = null;
+          continue;
+        }
+        
+        // Set as pending
+        track.status = 'pending';
+        
+        try {
+          const response = await fetch('/api/bpm/lookup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              artist: this.form.artist,
+              title: track.title
+            })
+          });
+          
+          const data = await response.json();
+          
+          if (response.ok && data.success) {
+            track.status = 'completed';
+            track.result = data.data;
+          } else {
+            track.status = 'error';
+            track.result = null;
+          }
+        } catch (error) {
+          console.error('BPM lookup error:', error);
+          track.status = 'error';
+          track.result = null;
+        }
+        
+        // Wait 750ms before next request (unless it's the last one)
+        if (i < this.bpmLookup.tracks.length - 1) {
+          await delay(750);
+        }
+      }
+      
+      this.bpmLookup.isRunning = false;
+    },
+
+    applyBulkBpmData() {
+      const sideIndex = this.bpmLookup.sideIndex;
+      
+      // Apply all completed results to the form
+      for (const track of this.bpmLookup.tracks) {
+        if (track.status === 'completed' && track.result) {
+          const formTrack = this.form.sides[sideIndex].tracks[track.trackIndex];
+          if (track.result.bpm != null) {
+            formTrack.bpm = Number(track.result.bpm);
+          }
+          if (track.result.key) {
+            formTrack.key = track.result.key;
+          }
+          if (track.result.timeSignature) {
+            formTrack.timeSignature = track.result.timeSignature;
+          }
+        }
+      }
+      
+      this.closeBpmLookup();
+    },
+
+    async saveChanges() {
+      this.saving = true;
+      
+      try {
+        const response = await fetch(`/api/library/${this.itemId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: this.form.title,
+            artist: this.form.artist,
+            year: this.form.year,
+            format: this.form.format,
+            notes: this.form.notes,
+            sides: this.form.sides
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to save');
+        }
+
+        // Redirect back to library
+        window.location.href = '/library';
+      } catch (error) {
+        console.error('Save error:', error);
+        alert('Failed to save changes: ' + error.message);
+      } finally {
+        this.saving = false;
+      }
+    }
+  };
+}
+</script>

@@ -1,0 +1,177 @@
+<%# Print Card Page %>
+
+<!-- Pass item data to Alpine.js -->
+<script>
+  window.printItem = <%- JSON.stringify(item) %>;
+</script>
+
+<div x-data="printPage()" x-init="init()" class="print:bg-white print:p-0">
+  <!-- Print Header -->
+  <div class="flex justify-between items-center mb-6 no-print">
+    <h2 class="text-2xl font-bold">Print Card</h2>
+    <div class="flex gap-2">
+      <button @click="window.print()" class="btn btn-primary"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 mr-1"><path fill-rule="evenodd" d="M7.875 1.5C6.839 1.5 6 2.34 6 3.375v2.99c-.426.053-.851.11-1.274.174-1.454.218-2.476 1.483-2.476 2.917v6.294a3 3 0 0 0 3 3h.27l-.155 1.705A1.875 1.875 0 0 0 7.232 22.5h9.536a1.875 1.875 0 0 0 1.867-2.045l-.155-1.705h.27a3 3 0 0 0 3-3V9.456c0-1.434-1.022-2.7-2.476-2.917A48.716 48.716 0 0 0 18 6.366V3.375c0-1.036-.84-1.875-1.875-1.875h-8.25ZM16.5 6.205v-2.83A.375.375 0 0 0 16.125 3h-8.25a.375.375 0 0 0-.375.375v2.83a49.353 49.353 0 0 1 9 0Zm-.217 8.265c.178.018.317.16.333.337l.526 5.784a.375.375 0 0 1-.374.409H7.232a.375.375 0 0 1-.374-.409l.526-5.784a.373.373 0 0 1 .333-.337 41.741 41.741 0 0 1 8.566 0Zm.967-3.97a.75.75 0 0 1 .75-.75h.008a.75.75 0 0 1 .75.75v.008a.75.75 0 0 1-.75.75H18a.75.75 0 0 1-.75-.75V10.5ZM15 9.75a.75.75 0 0 0-.75.75v.008c0 .414.336.75.75.75h.008a.75.75 0 0 0 .75-.75V10.5a.75.75 0 0 0-.75-.75H15Z" clip-rule="evenodd" /></svg>Print</button>
+      <a href="/library" class="btn btn-ghost">Back to Library</a>
+    </div>
+  </div>
+
+  <div class="flex gap-6">
+  <!-- Printable Card -->
+  <div class="card bg-base-100 shadow-xl print:shadow-none print:bg-white print:p-0 print:m-0 print:mt-[10px] w-[500px] print:w-[4in] ml-0">
+    <div class="card-body print:p-0">
+      <!-- Album Header -->
+      <div class="border-b border-gray-300 pb-2 mb-2">
+        <h1 class="text-xl print:text-[20px] font-bold">
+          <span x-text="item.title"></span>
+          <template x-if="item.year">
+            <span x-text="' (' + item.year + ')'"></span>
+          </template>
+          <span class="font-normal"> — </span>
+          <span class="font-normal" x-text="item.artist"></span>
+        </h1>
+        <template x-if="item.boxSet">
+          <p class="text-sm print:text-[10px] text-primary" x-text="'[boxed set - ' + item.boxSet + ']'"></p>
+        </template>
+      </div>
+
+      <!-- Tracklist - Grouped by Side (sortOrder: 'track' or 'bpm-side') -->
+      <template x-if="(item.sides && item.sides.length > 0) && sortOrder !== 'bpm-all'">
+        <div>
+          <div class="space-y-4">
+            <template x-for="(side, sideIndex) in getSortedSides()" :key="sideIndex">
+              <div class="overflow-x-auto">
+                <table class="table table-sm print:text-[12px] [&_tr]:border-gray-300">
+                  <tbody>
+                    <template x-for="(track, i) in side.tracks" :key="i">
+                      <tr>
+                        <td class="w-[15px] pr-[1px] print:text-black" x-text="track.position || i + 1"></td>
+                        <td class="print:text-black" x-text="track.title || 'Untitled'"></td>
+                        <td class="w-12 text-right text-base-content/60 print:text-black" x-text="track.bpm || '--'"></td>
+                        <td class="w-12 text-center text-base-content/60 print:text-black" x-text="track.key || '--'"></td>
+                        <td class="w-12 text-center text-base-content/60 print:text-black" x-text="track.timeSignature || '--'"></td>
+                        <td class="w-16 text-right text-base-content/60 print:text-black" x-text="track.duration || ''"></td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+            </template>
+          </div>
+        </div>
+      </template>
+
+      <!-- Tracklist - Combined (sortOrder: 'bpm-all') -->
+      <template x-if="(item.sides && item.sides.length > 0) && sortOrder === 'bpm-all'">
+        <div class="overflow-x-auto">
+          <table class="table table-sm print:text-[12px] [&_tr]:border-gray-300">
+            <tbody>
+              <template x-for="(track, i) in getAllTracksSortedByBpm()" :key="i">
+                <tr>
+                  <td class="w-[15px] pr-[1px] print:text-black" x-text="track.position || i + 1"></td>
+                  <td class="print:text-black" x-text="track.title || 'Untitled'"></td>
+                  <td class="w-12 text-right text-base-content/60 print:text-black" x-text="track.bpm || '--'"></td>
+                  <td class="w-12 text-center text-base-content/60 print:text-black" x-text="track.key || '--'"></td>
+                  <td class="w-12 text-center text-base-content/60 print:text-black" x-text="track.timeSignature || '--'"></td>
+                  <td class="w-16 text-right text-base-content/60 print:text-black" x-text="track.duration || ''"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </template>
+      
+      <template x-if="!item.sides || item.sides.length === 0">
+        <p class="text-base-content/50">No tracklist available</p>
+      </template>
+
+      <!-- Notes -->
+      <template x-if="item.notes">
+        <div class="mt-6 p-4 bg-base-200 rounded-lg print:bg-gray-100">
+          <h3 class="font-semibold mb-2 print:text-[12px]">Notes</h3>
+          <p class="text-sm print:text-[12px]" x-text="item.notes"></p>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- Sort Options Panel -->
+  <div class="no-print w-48">
+    <h3 class="font-medium text-sm mb-3">Sort Order</h3>
+    <div class="space-y-2">
+      <label class="flex items-start gap-2 cursor-pointer">
+        <input type="radio" name="sortOrder" value="bpm-all" x-model="sortOrder" class="radio radio-sm mt-0.5">
+        <div>
+          <p class="text-sm">By BPM (All)</p>
+          <p class="text-xs text-base-content/60">One table</p>
+        </div>
+      </label>
+      
+      <label class="flex items-start gap-2 cursor-pointer">
+        <input type="radio" name="sortOrder" value="bpm-side" x-model="sortOrder" class="radio radio-sm mt-0.5">
+        <div>
+          <p class="text-sm">By BPM (Per Side)</p>
+          <p class="text-xs text-base-content/60">Grouped by side</p>
+        </div>
+      </label>
+      
+      <label class="flex items-start gap-2 cursor-pointer">
+        <input type="radio" name="sortOrder" value="track" x-model="sortOrder" class="radio radio-sm mt-0.5">
+        <div>
+          <p class="text-sm">By Track Number</p>
+          <p class="text-xs text-base-content/60">Original order</p>
+        </div>
+      </label>
+    </div>
+  </div>
+  </div>
+</div>
+
+<script>
+function printPage() {
+  return {
+    item: window.printItem,
+    sortOrder: 'bpm-all', // 'bpm-all', 'bpm-side', 'track'
+
+    init() {
+      // Could restore last used sort order from localStorage if desired
+    },
+
+    getSortedSides() {
+      if (!this.item.sides) return [];
+      
+      if (this.sortOrder === 'track') {
+        // Original order
+        return this.item.sides;
+      }
+      
+      if (this.sortOrder === 'bpm-side') {
+        // Sort tracks within each side by BPM (descending)
+        return this.item.sides.map(side => ({
+          ...side,
+          tracks: [...side.tracks].sort((a, b) => {
+            const bpmA = a.bpm || 0;
+            const bpmB = b.bpm || 0;
+            return bpmB - bpmA;
+          })
+        }));
+      }
+      
+      return this.item.sides;
+    },
+
+    getAllTracksSortedByBpm() {
+      if (!this.item.sides) return [];
+      
+      // Flatten all tracks from all sides
+      const allTracks = this.item.sides.flatMap(side => side.tracks);
+      
+      // Sort by BPM (descending)
+      return allTracks.sort((a, b) => {
+        const bpmA = a.bpm || 0;
+        const bpmB = b.bpm || 0;
+        return bpmB - bpmA;
+      });
+    }
+  };
+}
+</script>

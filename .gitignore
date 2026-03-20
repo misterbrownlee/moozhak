@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Config with sensitive data
+.mzkconfig
+
+# LLM context
+llm.md
+
+# Output files
+dist/
+
+# Log files
+.logs/
+
+# User data
+data/
+
+# Generated CSS
+web/public/styles.css
+
+# OS files
+.DS_Store

@@ -1,0 +1,51 @@
+<%#
+  Item List Row Partial - Horizontal list view for library/collection items
+  Params:
+    - item: item object with id, title, artist, year, thumb
+    - type: 'library' or 'collection' - determines which actions to show
+    - inLibrary: boolean (for collection items) - whether already in library
+%>
+<%
+  const itemType = typeof type !== 'undefined' ? type : 'library';
+  const isInLibrary = typeof inLibrary !== 'undefined' ? inLibrary : false;
+  const itemId = item.id || item.instance_id;
+  const title = item.title || item.basic_information?.title || 'Unknown Title';
+  const artist = item.artist || (item.basic_information?.artists ? item.basic_information.artists.map(a => a.name).join(', ') : 'Unknown Artist');
+  const year = item.year || item.basic_information?.year || '';
+  const thumb = item.thumb || item.basic_information?.thumb || '';
+  const cover = item.cover || thumb;
+  const discogsId = item.discogsId || item.basic_information?.id || item.id;
+%>
+<div class="card card-side bg-base-100 shadow-md hover:shadow-lg transition-shadow">
+  <figure class="w-24 h-24 flex-shrink-0 m-4">
+    <%- include('album-image', { thumb, cover, title, size: 'sm' }) %>
+  </figure>
+  <div class="card-body py-4">
+    <h3 class="card-title text-base line-clamp-1"><%= title %><% if (year) { %> (<%= year %>)<% } %></h3>
+    <p class="text-sm text-base-content/70"><%= artist %></p>
+    <div class="card-actions justify-end mt-2">
+      <% if (itemType === 'library') { %>
+        <button @click="openEditModal('<%= itemId %>')" class="btn btn-xs btn-ghost" title="Edit">
+          ✏️ Edit
+        </button>
+        <a href="/print/<%= itemId %>" class="btn btn-xs btn-ghost" title="Print">
+          🖨️ Print
+        </a>
+        <button @click="deleteItem('<%= itemId %>')" class="btn btn-xs btn-ghost text-error" title="Remove">
+          🗑️
+        </button>
+      <% } else if (itemType === 'collection') { %>
+        <button @click="viewDetails('release', <%= discogsId %>)" class="btn btn-xs btn-ghost">
+          View Tracks
+        </button>
+        <% if (isInLibrary) { %>
+          <span class="btn btn-xs btn-disabled">In Library ✓</span>
+        <% } else { %>
+          <button @click="quickAdd('release', <%= discogsId %>)" class="btn btn-xs btn-primary">
+            Add to Library
+          </button>
+        <% } %>
+      <% } %>
+    </div>
+  </div>
+</div>

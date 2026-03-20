@@ -1,0 +1,28 @@
+<%# 
+  Album Image Partial
+  Params:
+    - thumb: thumbnail image URL (150px, optional)
+    - cover: full-size cover image URL (optional)
+    - title: album title for alt text
+    - size: 'sm' | 'md' | 'lg' (default: 'md')
+%>
+<%
+  const sizeClasses = {
+    sm: 'w-24 h-24',
+    md: 'w-48 h-48',
+    lg: 'w-full h-48'
+  };
+  const currentSize = typeof size !== 'undefined' ? size : 'md';
+  const sizeClass = sizeClasses[currentSize];
+  
+  // Use cover (high-res) for large/medium sizes, thumb for small
+  // Discogs URLs are signed so we can't modify them - use as-is
+  const imageUrl = (currentSize === 'lg' || currentSize === 'md') 
+    ? (typeof cover !== 'undefined' && cover ? cover : thumb)
+    : thumb;
+%>
+<% if (imageUrl) { %>
+  <img src="<%= imageUrl %>" alt="<%= title %>" class="<%= sizeClass %> object-contain rounded-lg">
+<% } else { %>
+  <div class="<%= sizeClass %> bg-base-300 rounded-lg flex items-center justify-center text-4xl">🎵</div>
+<% } %>

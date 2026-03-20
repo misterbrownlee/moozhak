@@ -1,0 +1,73 @@
+<%# Library Page %>
+
+<div class="flex justify-between items-center mb-6">
+  <div class="flex items-center gap-4">
+    <h2 class="text-2xl font-bold">Vinyl Library</h2>
+    <span class="badge badge-lg badge-primary"><%= items.length %> album<%= items.length !== 1 ? 's' : '' %></span>
+  </div>
+  <% if (items.length > 0) { %>
+    <%- include('partials/view-toggle') %>
+  <% } %>
+</div>
+
+<% if (items.length === 0) { %>
+  <div class="text-center py-12">
+    <p class="text-lg text-base-content/60">Your library is empty.</p>
+    <p class="text-sm text-base-content/40 mt-2">Search for albums and add them to your collection!</p>
+    <a href="/" class="btn btn-primary mt-4">Start Searching</a>
+  </div>
+<% } else { %>
+  <!-- Card View -->
+  <div x-show="viewMode === 'cards'" class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <% items.forEach(item => { %>
+      <div class="card relative overflow-hidden shadow-md hover:shadow-lg transition-shadow cursor-pointer aspect-square rounded-lg" @click="viewLibraryItem('<%= item.id %>')">
+        <figure class="absolute inset-0">
+          <% if (item.cover || item.thumb) { %>
+            <img src="<%= item.cover || item.thumb %>" alt="<%= item.title %>" class="w-full h-full object-cover">
+          <% } else { %>
+            <div class="w-full h-full bg-base-300 flex items-center justify-center text-6xl">🎵</div>
+          <% } %>
+        </figure>
+        <div class="card-body absolute bottom-[1rem] left-[8px] right-[8px] bg-base-100/40 backdrop-blur-sm p-4 rounded-lg">
+          <h3 class="card-title text-base line-clamp-1 text-[#d3d7e1]"><%= item.title %><% if (item.year) { %> (<%= item.year %>)<% } %></h3>
+          <p class="text-sm line-clamp-1 text-[#d3d7e1]"><%= item.artist %></p>
+          <% if (item.boxSet) { %>
+            <p class="text-xs text-primary">[boxed set - <%= item.boxSet %>]</p>
+          <% } %>
+          <div class="card-actions justify-between items-center mt-2" @click.stop>
+            <div class="flex gap-1 items-center">
+              <a href="/library/<%= item.id %>/edit" class="btn btn-xs btn-ghost" title="Edit"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><path d="M21.731 2.269a2.625 2.625 0 0 0-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 0 0 0-3.712ZM19.513 8.199l-3.712-3.712-8.4 8.4a5.25 5.25 0 0 0-1.32 2.214l-.8 2.685a.75.75 0 0 0 .933.933l2.685-.8a5.25 5.25 0 0 0 2.214-1.32l8.4-8.4Z" /><path d="M5.25 5.25a3 3 0 0 0-3 3v10.5a3 3 0 0 0 3 3h10.5a3 3 0 0 0 3-3V13.5a.75.75 0 0 0-1.5 0v5.25a1.5 1.5 0 0 1-1.5 1.5H5.25a1.5 1.5 0 0 1-1.5-1.5V8.25a1.5 1.5 0 0 1 1.5-1.5h5.25a.75.75 0 0 0 0-1.5H5.25Z" /></svg></a>
+              <a href="/print/<%= item.id %>" class="btn btn-xs btn-ghost" title="Print"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M7.875 1.5C6.839 1.5 6 2.34 6 3.375v2.99c-.426.053-.851.11-1.274.174-1.454.218-2.476 1.483-2.476 2.917v6.294a3 3 0 0 0 3 3h.27l-.155 1.705A1.875 1.875 0 0 0 7.232 22.5h9.536a1.875 1.875 0 0 0 1.867-2.045l-.155-1.705h.27a3 3 0 0 0 3-3V9.456c0-1.434-1.022-2.7-2.476-2.917A48.716 48.716 0 0 0 18 6.366V3.375c0-1.036-.84-1.875-1.875-1.875h-8.25ZM16.5 6.205v-2.83A.375.375 0 0 0 16.125 3h-8.25a.375.375 0 0 0-.375.375v2.83a49.353 49.353 0 0 1 9 0Zm-.217 8.265c.178.018.317.16.333.337l.526 5.784a.375.375 0 0 1-.374.409H7.232a.375.375 0 0 1-.374-.409l.526-5.784a.373.373 0 0 1 .333-.337 41.741 41.741 0 0 1 8.566 0Zm.967-3.97a.75.75 0 0 1 .75-.75h.008a.75.75 0 0 1 .75.75v.008a.75.75 0 0 1-.75.75H18a.75.75 0 0 1-.75-.75V10.5ZM15 9.75a.75.75 0 0 0-.75.75v.008c0 .414.336.75.75.75h.008a.75.75 0 0 0 .75-.75V10.5a.75.75 0 0 0-.75-.75H15Z" clip-rule="evenodd" /></svg></a>
+            </div>
+            <button @click="deleteItem('<%= item.id %>')" class="btn btn-xs btn-ghost text-warning" title="Remove"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M16.5 4.478v.227a48.816 48.816 0 0 1 3.878.512.75.75 0 1 1-.256 1.478l-.209-.035-1.005 13.07a3 3 0 0 1-2.991 2.77H8.084a3 3 0 0 1-2.991-2.77L4.087 6.66l-.209.035a.75.75 0 0 1-.256-1.478A48.567 48.567 0 0 1 7.5 4.705v-.227c0-1.564 1.213-2.9 2.816-2.951a52.662 52.662 0 0 1 3.369 0c1.603.051 2.815 1.387 2.815 2.951Zm-6.136-1.452a51.196 51.196 0 0 1 3.273 0C14.39 3.05 15 3.684 15 4.478v.113a49.488 49.488 0 0 0-6 0v-.113c0-.794.609-1.428 1.364-1.452Zm-.355 5.945a.75.75 0 1 0-1.5.058l.347 9a.75.75 0 1 0 1.499-.058l-.346-9Zm5.48.058a.75.75 0 1 0-1.498-.058l-.347 9a.75.75 0 0 0 1.5.058l.345-9Z" clip-rule="evenodd" /></svg></button>
+          </div>
+        </div>
+      </div>
+    <% }); %>
+  </div>
+  
+  <!-- List View -->
+  <div x-show="viewMode === 'list'" class="grid gap-4">
+    <% items.forEach(item => { %>
+      <div class="card card-side bg-base-100 shadow-md hover:shadow-lg transition-shadow cursor-pointer" @click="viewLibraryItem('<%= item.id %>')">
+        <figure class="w-24 h-24 flex-shrink-0 m-4">
+          <%- include('partials/album-image', { thumb: item.thumb, cover: item.cover, title: item.title, size: 'sm' }) %>
+        </figure>
+        <div class="card-body py-4">
+          <h3 class="card-title text-base line-clamp-1"><%= item.title %><% if (item.year) { %> (<%= item.year %>)<% } %></h3>
+          <p class="text-sm text-base-content/70">
+            <%= item.artist %>
+            <% if (item.boxSet) { %>
+              <span class="text-xs text-primary ml-2">[boxed set - <%= item.boxSet %>]</span>
+            <% } %>
+          </p>
+          <div class="card-actions justify-end items-center mt-2" @click.stop>
+            <a href="/library/<%= item.id %>/edit" class="btn btn-xs btn-ghost" title="Edit"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 mr-1"><path d="M21.731 2.269a2.625 2.625 0 0 0-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 0 0 0-3.712ZM19.513 8.199l-3.712-3.712-8.4 8.4a5.25 5.25 0 0 0-1.32 2.214l-.8 2.685a.75.75 0 0 0 .933.933l2.685-.8a5.25 5.25 0 0 0 2.214-1.32l8.4-8.4Z" /><path d="M5.25 5.25a3 3 0 0 0-3 3v10.5a3 3 0 0 0 3 3h10.5a3 3 0 0 0 3-3V13.5a.75.75 0 0 0-1.5 0v5.25a1.5 1.5 0 0 1-1.5 1.5H5.25a1.5 1.5 0 0 1-1.5-1.5V8.25a1.5 1.5 0 0 1 1.5-1.5h5.25a.75.75 0 0 0 0-1.5H5.25Z" /></svg>Edit</a>
+            <a href="/print/<%= item.id %>" class="btn btn-xs btn-ghost" title="Print"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 mr-1"><path fill-rule="evenodd" d="M7.875 1.5C6.839 1.5 6 2.34 6 3.375v2.99c-.426.053-.851.11-1.274.174-1.454.218-2.476 1.483-2.476 2.917v6.294a3 3 0 0 0 3 3h.27l-.155 1.705A1.875 1.875 0 0 0 7.232 22.5h9.536a1.875 1.875 0 0 0 1.867-2.045l-.155-1.705h.27a3 3 0 0 0 3-3V9.456c0-1.434-1.022-2.7-2.476-2.917A48.716 48.716 0 0 0 18 6.366V3.375c0-1.036-.84-1.875-1.875-1.875h-8.25ZM16.5 6.205v-2.83A.375.375 0 0 0 16.125 3h-8.25a.375.375 0 0 0-.375.375v2.83a49.353 49.353 0 0 1 9 0Zm-.217 8.265c.178.018.317.16.333.337l.526 5.784a.375.375 0 0 1-.374.409H7.232a.375.375 0 0 1-.374-.409l.526-5.784a.373.373 0 0 1 .333-.337 41.741 41.741 0 0 1 8.566 0Zm.967-3.97a.75.75 0 0 1 .75-.75h.008a.75.75 0 0 1 .75.75v.008a.75.75 0 0 1-.75.75H18a.75.75 0 0 1-.75-.75V10.5ZM15 9.75a.75.75 0 0 0-.75.75v.008c0 .414.336.75.75.75h.008a.75.75 0 0 0 .75-.75V10.5a.75.75 0 0 0-.75-.75H15Z" clip-rule="evenodd" /></svg>Print</a>
+            <button @click="deleteItem('<%= item.id %>')" class="btn btn-xs btn-ghost text-warning" title="Remove"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M16.5 4.478v.227a48.816 48.816 0 0 1 3.878.512.75.75 0 1 1-.256 1.478l-.209-.035-1.005 13.07a3 3 0 0 1-2.991 2.77H8.084a3 3 0 0 1-2.991-2.77L4.087 6.66l-.209.035a.75.75 0 0 1-.256-1.478A48.567 48.567 0 0 1 7.5 4.705v-.227c0-1.564 1.213-2.9 2.816-2.951a52.662 52.662 0 0 1 3.369 0c1.603.051 2.815 1.387 2.815 2.951Zm-6.136-1.452a51.196 51.196 0 0 1 3.273 0C14.39 3.05 15 3.684 15 4.478v.113a49.488 49.488 0 0 0-6 0v-.113c0-.794.609-1.428 1.364-1.452Zm-.355 5.945a.75.75 0 1 0-1.5.058l.347 9a.75.75 0 1 0 1.499-.058l-.346-9Zm5.48.058a.75.75 0 1 0-1.498-.058l-.347 9a.75.75 0 0 0 1.5.058l.345-9Z" clip-rule="evenodd" /></svg></button>
+          </div>
+        </div>
+      </div>
+    <% }); %>
+  </div>
+<% } %>

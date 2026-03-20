@@ -1,0 +1,38 @@
+<%# Search Page %>
+
+<!-- Search Form -->
+<div class="card bg-base-100 shadow-xl">
+  <div class="card-body">
+    <h2 class="card-title">Search Vinyl Records</h2>
+    <p class="text-sm text-base-content/60 mb-2">Search Discogs for vinyl releases</p>
+    <form class="flex flex-col sm:flex-row gap-4">
+      <input 
+        type="text" 
+        name="q"
+        placeholder="Artist name, album title..." 
+        class="input input-bordered flex-1"
+        value="<%= typeof query !== 'undefined' ? query : '' %>"
+        required
+      >
+      <button type="submit" class="btn btn-primary">Search</button>
+    </form>
+  </div>
+</div>
+
+<!-- Search Results -->
+<div class="mt-6 grid gap-4">
+  <% if (typeof results !== 'undefined' && results !== null) { %>
+    <% if (results.length === 0) { %>
+      <div class="alert alert-info">
+        <span>No results found. Try a different search term.</span>
+      </div>
+    <% } else { %>
+      <% results.forEach(result => { %>
+        <%- include('partials/search-result-card', { 
+          result, 
+          inLibrary: libraryIds.includes(String(result.id))
+        }) %>
+      <% }); %>
+    <% } %>
+  <% } %>
+</div>

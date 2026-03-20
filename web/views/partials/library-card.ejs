@@ -1,0 +1,30 @@
+<%#
+  Library Card Partial
+  Params:
+    - item: library item object (id, title, artist, year, thumb, notes)
+%>
+<div class="card bg-base-100 shadow-md hover:shadow-lg transition-shadow">
+  <figure class="px-4 pt-4">
+    <%- include('album-image', { thumb: item.thumb, cover: item.cover, title: item.title, size: 'lg' }) %>
+  </figure>
+  <div class="card-body">
+    <h3 class="card-title text-base line-clamp-2"><%= item.title %><% if (item.year) { %> (<%= item.year %>)<% } %></h3>
+    <p class="text-sm text-base-content/70"><%= item.artist %></p>
+    <% if (item.notes) { %>
+      <p class="text-xs text-base-content/50 mt-2 line-clamp-2"><%= item.notes %></p>
+    <% } %>
+    <div class="card-actions justify-between mt-3">
+      <div class="flex gap-1">
+        <button @click="openEditModal('<%= item.id %>')" class="btn btn-xs btn-ghost" title="Edit">
+          ✏️
+        </button>
+        <a href="/print/<%= item.id %>" class="btn btn-xs btn-ghost" title="Print Card">
+          🖨️
+        </a>
+      </div>
+      <button @click="deleteItem('<%= item.id %>')" class="btn btn-xs btn-ghost text-error" title="Remove">
+        🗑️
+      </button>
+    </div>
+  </div>
+</div>

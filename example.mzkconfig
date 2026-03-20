@@ -1,0 +1,32 @@
+# Muzak Configuration
+# copy this file to ../.mzkconfig
+# and update whatever setting turns your propeller
+
+# Your Discogs token
+DISCOGS_TOKEN=
+
+# Your Discogs username (for fetching your collection)
+# DISCOGS_USERNAME=your_username
+
+# Clean dist folder before each command (set to any value to enable)
+# by default outputs are timestamped and will pile up after a bit
+# ALWAYS_CLEAN=true
+
+# Verbose mode - echo commands and HTTP responses to the console
+# VERBOSE=true
+
+# Results per page (default: 5)
+# PER_PAGE=5
+
+# Default search type: artist, release, master, label (default: none)
+# DEFAULT_TYPE=master
+
+# Default tracks type: master or release (default: master)
+# DEFAULT_TRACKS_TYPE=master
+
+# Default tracks output format: human, csv, pipe, markdown (default: human)
+# DEFAULT_TRACKS_OUTPUT=human
+
+# GetSongBPM API key for BPM lookups (https://getsongbpm.com/api)
+# GETBPM_API_KEY=your_api_key_here
+

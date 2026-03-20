@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= typeof title !== 'undefined' ? title + ' - ' : '' %>Vinyl Library</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script type="module" src="/init-moozhak-domain.js"></script>
+  <script defer src="/app.js"></script>
+  <style>
+    @media print {
+      body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0 !important; padding: 0 !important; }
+      main { padding: 0 !important; margin: 0 !important; max-width: none !important; }
+      .no-print { display: none !important; }
+      .print\:bg-white { background: white !important; }
+      .print\:shadow-none { box-shadow: none !important; }
+      .print\:bg-gray-100 { background: #f3f4f6 !important; }
+      .print\:p-0 { padding: 0 !important; }
+      .print\:m-0 { margin: 0 !important; }
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-base-200" x-data="vinylApp()">
+  <!-- Navbar -->
+  <nav class="navbar bg-base-100 shadow-lg no-print">
+    <div class="flex-1">
+      <a href="/" class="btn btn-ghost text-xl">🎵 Vinyl Library</a>
+    </div>
+    <div class="flex-none">
+      <ul class="menu menu-horizontal px-1">
+        <li><a href="/" class="btn btn-ghost <%= typeof activeView !== 'undefined' && activeView === 'search' ? 'btn-active' : '' %>">Search</a></li>
+        <li><a href="/collection" class="btn btn-ghost <%= typeof activeView !== 'undefined' && activeView === 'collection' ? 'btn-active' : '' %>">Collection</a></li>
+        <li><a href="/library" class="btn btn-ghost <%= typeof activeView !== 'undefined' && activeView === 'library' ? 'btn-active' : '' %>">Library</a></li>
+      </ul>
+      <!-- Theme Selector (hidden for now)
+      <select 
+        class="select select-bordered select-sm ml-2" 
+        x-model="theme"
+        @change="changeTheme(theme)"
+      >
+        <option value="nord">Nord</option>
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+        <option value="cupcake">Cupcake</option>
+      </select>
+      -->
+    </div>
+  </nav>
+
+  <main class="container mx-auto p-4 max-w-6xl">
+    <%- body %>
+  </main>
+
+  <!-- Loading Indicator -->
+  <div x-show="loading" x-cloak class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <span class="loading loading-spinner loading-lg text-primary"></span>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast toast-end toast-bottom z-50">
+    <template x-for="toast in toasts" :key="toast.id">
+      <div :class="'alert shadow-lg alert-' + toast.type" x-text="toast.message"></div>
+    </template>
+  </div>
+
+  <%- include('../partials/modals') %>
+</body>
+</html>

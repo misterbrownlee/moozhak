@@ -1,0 +1,27 @@
+---
+description: Require pragmatic tests with behavior-first coverage and minimal mocking complexity.
+alwaysApply: true
+---
+
+# Pragmatic Testing
+
+- Add or update tests for any meaningful behavior change.
+- Prefer testing observable behavior over implementation details.
+- Use simple fakes or fixtures first; avoid deep or brittle mocks.
+- Mock only unstable boundaries (network, time, randomness, file IO, process env).
+- For refactors, add regression tests before large moves when feasible.
+- Keep tests easy to read: setup, execute, verify.
+- Avoid over-asserting internal call counts unless behavior depends on it.
+
+## Default test split
+
+- `core/`: fast unit tests for pure transforms and wrapper contract shaping.
+- `web/server/`: route/controller tests for request-response behavior.
+- `web/client/`: tests around user-visible rendering logic when practical.
+
+## Example
+
+```js
+// Prefer: mock fetch boundary, assert normalized response shape.
+// Avoid: mocking every helper inside the same module under test.
+```

@@ -1,0 +1,39 @@
+<%#
+  Tracklist Table Partial
+  Params:
+    - tracklist: array of track objects with position, title, duration, bpm, key, timeSignature
+    - compact: boolean (default: false)
+    - hideHeaders: boolean (default: false) - hide table headers (for print views)
+%>
+<% if (!tracklist || tracklist.length === 0) { %>
+  <p class="text-base-content/50">No tracklist available</p>
+<% } else { %>
+  <div class="overflow-x-auto">
+    <table class="table <%= typeof compact !== 'undefined' && compact ? 'table-sm w-full' : 'table-sm' %>">
+      <% if (typeof hideHeaders === 'undefined' || !hideHeaders) { %>
+      <thead>
+        <tr>
+          <th class="w-16">#</th>
+          <th>Title</th>
+          <th class="w-16 text-right">BPM</th>
+          <th class="w-16 text-center">Key</th>
+          <th class="w-16 text-center">Sig</th>
+          <th class="w-20 text-right">Duration</th>
+        </tr>
+      </thead>
+      <% } %>
+      <tbody>
+        <% tracklist.forEach((track, i) => { %>
+          <tr class="hover">
+            <td class="text-base-content/60"><%= track.position || i + 1 %></td>
+            <td><%= track.title || 'Untitled' %></td>
+            <td class="text-right text-base-content/60"><%= track.bpm || '--' %></td>
+            <td class="text-center text-base-content/60"><%= track.key || '--' %></td>
+            <td class="text-center text-base-content/60"><%= track.timeSignature || '--' %></td>
+            <td class="text-right text-base-content/60"><%= track.duration || '' %></td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+<% } %>

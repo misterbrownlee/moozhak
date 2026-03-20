@@ -1,0 +1,97 @@
+<%# All Modal Dialogs %>
+
+<!-- Details Modal (for viewing tracklist before adding) -->
+<dialog id="details-modal" class="modal" x-ref="detailsModal">
+  <div class="modal-box w-11/12 max-w-3xl">
+    <form method="dialog">
+      <button class="btn btn-sm btn-ghost absolute right-4 top-4">✕</button>
+    </form>
+    <template x-if="detailsData">
+      <div>
+        <div class="flex flex-col md:flex-row gap-6">
+          <div class="flex-shrink-0">
+            <template x-if="detailsData.cover || detailsData.thumb">
+              <img :src="detailsData.cover || detailsData.thumb" :alt="detailsData.title" class="w-48 h-48 object-cover rounded-lg shadow">
+            </template>
+            <template x-if="!detailsData.cover && !detailsData.thumb">
+              <div class="w-48 h-48 bg-base-300 rounded-lg flex items-center justify-center text-4xl">🎵</div>
+            </template>
+          </div>
+          <div class="flex-1">
+            <h3 class="text-2xl font-bold">
+              <span x-text="detailsData.title"></span>
+              <template x-if="detailsData.year">
+                <span x-text="' (' + detailsData.year + ')'"></span>
+              </template>
+            </h3>
+            <p class="text-lg text-base-content/70 mt-1" x-text="detailsData.artist"></p>
+            <template x-if="detailsData.boxSet">
+              <p class="text-sm text-primary mt-1" x-text="'[boxed set - ' + detailsData.boxSet + ']'"></p>
+            </template>
+          </div>
+        </div>
+        
+        <template x-if="(detailsData.sides && detailsData.sides.length > 0) || (detailsData.tracklist && detailsData.tracklist.length > 0)">
+          <div class="mt-6">
+            <div class="space-y-4">
+              <template x-for="(side, sideIndex) in (detailsData.sides || groupTracksBySide(detailsData.tracklist))" :key="sideIndex">
+                <div class="overflow-x-auto">
+                  <table class="table table-sm">
+                    <thead>
+                      <tr>
+                        <th class="w-16">#</th>
+                        <th>Title</th>
+                        <th class="w-16 text-right">BPM</th>
+                        <th class="w-16 text-center">Key</th>
+                        <th class="w-16 text-center">Sig</th>
+                        <th class="w-20 text-right">Duration</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <template x-for="(track, i) in side.tracks" :key="i">
+                        <tr class="hover">
+                          <td class="w-16 text-base-content/60" x-text="track.position || i + 1"></td>
+                          <td x-text="track.title || 'Untitled'"></td>
+                          <td class="w-16 text-right text-base-content/60" x-text="track.bpm || '--'"></td>
+                          <td class="w-16 text-center text-base-content/60" x-text="track.key || '--'"></td>
+                          <td class="w-16 text-center text-base-content/60" x-text="track.timeSignature || '--'"></td>
+                          <td class="w-20 text-right text-base-content/60" x-text="track.duration || ''"></td>
+                        </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+      </div>
+    </template>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>
+
+<!-- Delete Confirmation Modal -->
+<dialog id="delete-modal" class="modal" x-ref="deleteModal">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg">Remove Album</h3>
+    <template x-if="deleteTarget">
+      <div class="py-4">
+        <p class="text-base-content/70">Are you sure you want to remove this album from your library?</p>
+        <div class="mt-4 p-3 bg-base-200 rounded-lg">
+          <p class="font-semibold" x-text="deleteTarget.title"></p>
+          <p class="text-sm text-base-content/60" x-text="deleteTarget.artist"></p>
+        </div>
+      </div>
+    </template>
+    <div class="modal-action">
+      <button @click="cancelDelete()" class="btn btn-ghost">Cancel</button>
+      <button @click="confirmDelete()" class="btn btn-warning">Remove</button>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button @click="cancelDelete()">close</button>
+  </form>
+</dialog>
