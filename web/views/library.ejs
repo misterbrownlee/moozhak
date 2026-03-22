@@ -7,7 +7,15 @@
     <span class="badge badge-lg badge-primary"><%= items.length %> album<%= items.length !== 1 ? 's' : '' %></span>
   </div>
   <% if (items.length > 0) { %>
-    <%- include('partials/view-toggle') %>
+    <div class="flex flex-wrap items-center gap-3">
+      <div class="flex items-center gap-2">
+        <span class="text-sm text-base-content/70">View</span>
+        <div class="join border border-base-300 rounded-lg overflow-hidden">
+          <button type="button" class="btn btn-sm join-item border-0 rounded-none" :class="librarySubView === 'albums' ? 'btn-active' : 'btn-ghost'" @click="librarySubView = 'albums'">Albums</button>
+          <button type="button" class="btn btn-sm join-item border-0 rounded-none" :class="librarySubView === 'tracks' ? 'btn-active' : 'btn-ghost'" @click="librarySubView = 'tracks'">Tracks</button>
+        </div>
+      </div>
+    </div>
   <% } %>
 </div>
 
@@ -18,8 +26,49 @@
     <a href="/" class="btn btn-primary mt-4">Start Searching</a>
   </div>
 <% } else { %>
+<script type="application/json" id="library-track-rows-data"><%- JSON.stringify(typeof trackRows !== 'undefined' ? trackRows : []) %></script>
+<script type="application/json" id="library-membership-keys-data"><%- JSON.stringify(typeof membershipKeys !== 'undefined' ? membershipKeys : []) %></script>
+  <!-- Tracks table -->
+  <div x-show="librarySubView === 'tracks'" class="mb-8" x-cloak>
+    <div class="overflow-x-auto rounded-lg border border-base-300 bg-base-100">
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th><button type="button" class="link link-hover font-semibold" @click="toggleLibraryTrackSort('trackTitle')">Track</button></th>
+            <th><button type="button" class="link link-hover font-semibold" @click="toggleLibraryTrackSort('artist')">Artist</button></th>
+            <th><button type="button" class="link link-hover font-semibold" @click="toggleLibraryTrackSort('albumTitle')">Album</button></th>
+            <th class="text-right"><button type="button" class="link link-hover font-semibold" @click="toggleLibraryTrackSort('bpm')">BPM</button></th>
+            <th class="text-center"><button type="button" class="link link-hover font-semibold" @click="toggleLibraryTrackSort('key')">Key</button></th>
+            <th>In set</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="row in sortedLibraryTrackRows()" :key="row.libraryItemId + '::' + String(row.position)">
+            <tr>
+              <td x-text="row.trackTitle"></td>
+              <td x-text="row.artist"></td>
+              <td x-text="row.albumTitle"></td>
+              <td class="text-right text-base-content/70" x-text="row.bpm != null ? row.bpm : '—'"></td>
+              <td class="text-center text-base-content/70" x-text="row.key || '—'"></td>
+              <td>
+                <span class="badge badge-success badge-sm" x-show="isTrackRowInSet(row)">In set</span>
+                <span class="text-base-content/40" x-show="!isTrackRowInSet(row)">—</span>
+              </td>
+              <td>
+                <button type="button" class="btn btn-xs btn-primary" @click="openAddToSetFromRow(row)">Add to set</button>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+    <p class="text-sm text-base-content/50 mt-2" x-show="libraryTrackRows.length === 0">No tracks in library.</p>
+  </div>
+
+  <div x-show="librarySubView === 'albums'" x-cloak>
   <!-- Card View -->
-  <div x-show="viewMode === 'cards'" class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+  <div x-show="viewMode === 'cards'" x-cloak class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
     <% items.forEach(item => { %>
       <div class="card relative overflow-hidden shadow-md hover:shadow-lg transition-shadow cursor-pointer aspect-square rounded-lg" @click="viewLibraryItem('<%= item.id %>')">
         <figure class="absolute inset-0">
@@ -48,7 +97,7 @@
   </div>
   
   <!-- List View -->
-  <div x-show="viewMode === 'list'" class="grid gap-4">
+  <div x-show="viewMode === 'list'" x-cloak class="grid gap-4">
     <% items.forEach(item => { %>
       <div class="card card-side bg-base-100 shadow-md hover:shadow-lg transition-shadow cursor-pointer" @click="viewLibraryItem('<%= item.id %>')">
         <figure class="w-24 h-24 flex-shrink-0 m-4">
@@ -70,5 +119,6 @@
         </div>
       </div>
     <% }); %>
+  </div>
   </div>
 <% } %>

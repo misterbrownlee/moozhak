@@ -136,6 +136,15 @@ function printPage() {
       // Could restore last used sort order from localStorage if desired
     },
 
+    printBpmSortValue(track) {
+      const n = window.MoozhakDomain?.numericBpmOrNull?.(track.bpm);
+      if (n != null) return n;
+      const v = track.bpm;
+      if (typeof v === 'number' && Number.isFinite(v)) return v;
+      const parsed = Number(String(v ?? '').trim());
+      return Number.isFinite(parsed) ? parsed : 0;
+    },
+
     getSortedSides() {
       if (!this.item.sides) return [];
       
@@ -149,9 +158,7 @@ function printPage() {
         return this.item.sides.map(side => ({
           ...side,
           tracks: [...side.tracks].sort((a, b) => {
-            const bpmA = a.bpm || 0;
-            const bpmB = b.bpm || 0;
-            return bpmB - bpmA;
+            return this.printBpmSortValue(b) - this.printBpmSortValue(a);
           })
         }));
       }
@@ -167,9 +174,7 @@ function printPage() {
       
       // Sort by BPM (descending)
       return allTracks.sort((a, b) => {
-        const bpmA = a.bpm || 0;
-        const bpmB = b.bpm || 0;
-        return bpmB - bpmA;
+        return this.printBpmSortValue(b) - this.printBpmSortValue(a);
       });
     }
   };

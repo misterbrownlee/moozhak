@@ -1,0 +1,42 @@
+<%#
+  Synchronous first-paint active state for the header view toggle.
+  Logic must match readLibraryUiPrefs + readViewModeFromStorage in web/lib/client/ui-prefs.js.
+%>
+<script>
+(function () {
+  var KEY = 'mzk:ui:library';
+  var mode = 'cards';
+  try {
+    var raw = localStorage.getItem(KEY);
+    var parsed = null;
+    if (raw) {
+      try {
+        parsed = JSON.parse(raw);
+      } catch (e) {
+        parsed = null;
+      }
+    }
+    var hasStoredViewMode =
+      parsed && typeof parsed === 'object' && Object.hasOwn(parsed, 'viewMode');
+    if (hasStoredViewMode) {
+      var vm = parsed.viewMode;
+      if (vm === 'list' || vm === 'cards') mode = vm;
+    } else {
+      var leg = localStorage.getItem('viewMode');
+      if (leg === 'list' || leg === 'cards') {
+        mode = leg;
+      } else if (parsed && typeof parsed === 'object') {
+        var vm2 = parsed.viewMode;
+        if (vm2 === 'list' || vm2 === 'cards') mode = vm2;
+      }
+    }
+  } catch (e) {
+    /* ignore */
+  }
+  var el =
+    mode === 'list'
+      ? document.getElementById('mzk-view-toggle-list')
+      : document.getElementById('mzk-view-toggle-cards');
+  if (el) el.classList.add('btn-active');
+})();
+</script>

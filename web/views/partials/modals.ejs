@@ -45,6 +45,7 @@
                         <th class="w-16 text-center">Key</th>
                         <th class="w-16 text-center">Sig</th>
                         <th class="w-20 text-right">Duration</th>
+                        <th class="w-28" x-show="detailsData.libraryItemId">Set</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -56,6 +57,9 @@
                           <td class="w-16 text-center text-base-content/60" x-text="track.key || '--'"></td>
                           <td class="w-16 text-center text-base-content/60" x-text="track.timeSignature || '--'"></td>
                           <td class="w-20 text-right text-base-content/60" x-text="track.duration || ''"></td>
+                          <td x-show="detailsData.libraryItemId">
+                            <button type="button" class="btn btn-xs btn-primary" @click.stop="openAddToSetFromDetails(track)">Add to set</button>
+                          </td>
                         </tr>
                       </template>
                     </tbody>
@@ -73,6 +77,30 @@
   </form>
 </dialog>
 
+<!-- Add to set -->
+<dialog id="add-to-set-modal" class="modal" x-ref="addToSetModal">
+  <div class="modal-box max-w-md">
+    <h3 class="font-bold text-lg">Add to set</h3>
+    <p class="text-sm text-base-content/60 py-2" x-show="addToSetContext" x-text="addToSetContext ? (addToSetContext.trackTitle || 'Track') + ' — pick a set or create one.' : ''"></p>
+    <div class="form-control w-full gap-2 max-h-60 overflow-y-auto">
+      <template x-for="s in addToSetPickerList" :key="s.id">
+        <button type="button" class="btn btn-sm btn-outline justify-start" @click="addTrackToExistingSet(s.id)" x-text="s.name || 'Untitled set'"></button>
+      </template>
+    </div>
+    <div class="divider">or</div>
+    <div class="flex gap-2 flex-wrap">
+      <input type="text" class="input input-bordered input-sm flex-1 min-w-[8rem]" placeholder="New set name" x-model="addToSetNewName" />
+      <button type="button" class="btn btn-sm btn-primary" @click="addTrackToNewSet()">Create & add</button>
+    </div>
+    <div class="modal-action">
+      <button type="button" class="btn btn-ghost" @click="closeAddToSetModal()">Cancel</button>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button @click="closeAddToSetModal()">close</button>
+  </form>
+</dialog>
+
 <!-- Delete Confirmation Modal -->
 <dialog id="delete-modal" class="modal" x-ref="deleteModal">
   <div class="modal-box">
@@ -83,6 +111,15 @@
         <div class="mt-4 p-3 bg-base-200 rounded-lg">
           <p class="font-semibold" x-text="deleteTarget.title"></p>
           <p class="text-sm text-base-content/60" x-text="deleteTarget.artist"></p>
+        </div>
+        <div class="mt-4 p-3 bg-warning/10 border border-warning/30 rounded-lg" x-show="deleteSetWarnings && deleteSetWarnings.length > 0">
+          <p class="font-medium text-warning">This album has tracks in the following sets:</p>
+          <ul class="list-disc list-inside mt-2 text-sm">
+            <template x-for="s in deleteSetWarnings" :key="s.id">
+              <li><a :href="'/sets/' + s.id" class="link link-primary" x-text="s.name"></a></li>
+            </template>
+          </ul>
+          <p class="text-xs text-base-content/60 mt-2">You can still remove the album; set entries will keep snapshot data.</p>
         </div>
       </div>
     </template>

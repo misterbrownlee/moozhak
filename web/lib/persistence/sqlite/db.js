@@ -37,6 +37,6 @@ export function closeDb() {
 export function clearAllPersistenceTables() {
   const db = getDb();
   db.exec(
-    'DELETE FROM library_items; DELETE FROM collection_cache; DELETE FROM app_settings;',
+    'DELETE FROM library_items; DELETE FROM collection_cache; DELETE FROM app_settings; DELETE FROM setlists;',
   );
 }

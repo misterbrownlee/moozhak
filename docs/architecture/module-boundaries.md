@@ -15,7 +15,8 @@ Use these boundaries for all refactor work.
   - [web/lib/](../../web/lib/) — persistence, logging, server-only helpers
   - [web/views/](../../web/views/) — EJS templates and layouts
 - **Web client layer**
-  - [web/public/](../../web/public/) — static assets, Alpine app, synced domain bundle (`moozhak-domain.js`)
+  - [web/public/](../../web/public/) — static assets, Alpine app, synced bundles (`moozhak-domain.js`, `moozhak-ui-prefs.js`)
+  - [web/lib/client/](../../web/lib/client/) — small browser-only modules unit-tested in Node (copied into `public/` by `npm run sync:domain`)
   - No server-only filesystem or process concerns
 
 A physical `web/server/` directory is **optional**; the responsibilities above are what matter. If files are moved later, update this doc in the same change set.

@@ -14,7 +14,7 @@ Tests should provide confidence without fragile mock setups.
 - `core/`: unit tests for transforms and wrapper contracts (e.g. [tests/core/domain](../../tests/core/domain)).
 - **Web HTTP**: integration tests under [tests/web](../../tests/web) using `supertest` against `createApp()` from [web/app.js](../../web/app.js). From the repo root: `npm run test:web`.
 - **SDK / services** (shared contracts, not the Express app): `tests/core`, `tests/services`, and [tests/config.test.js](../../tests/config.test.js). From the root: `npm run test:sdk`.
-- `web/client/`: optional tests for user-visible behavior where practical.
+- `tests/web/client/`: unit tests for small browser modules under [web/lib/client](../../web/lib/client) (e.g. UI prefs), imported as ESM in Jest.
 
 ### Web integration conventions
 

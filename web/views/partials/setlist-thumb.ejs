@@ -1,0 +1,16 @@
+<%#
+  Params: thumbUrls (array of 4 URLs or empty), vinylIconSvg optional from locals
+%>
+<% if (thumbUrls && thumbUrls.length === 4) { %>
+  <div class="grid grid-cols-2 gap-px w-full aspect-square rounded-lg overflow-hidden bg-base-300 ring-1 ring-base-300">
+    <% thumbUrls.forEach(function (u) { %>
+      <img src="<%= u %>" alt="" class="w-full h-full object-cover min-h-0" loading="lazy" />
+    <% }); %>
+  </div>
+<% } else if (typeof vinylIconSvg !== 'undefined' && vinylIconSvg) { %>
+  <div class="w-full aspect-square rounded-lg bg-base-300 flex items-center justify-center p-6 [&_svg]:w-full [&_svg]:h-full [&_svg]:max-w-[min(100%,8rem)] [&_svg]:max-h-[min(100%,8rem)] [&_svg]:opacity-90 text-base-content">
+    <%- vinylIconSvg %>
+  </div>
+<% } else { %>
+  <div class="w-full aspect-square rounded-lg bg-base-300 flex items-center justify-center text-4xl">🎵</div>
+<% } %>

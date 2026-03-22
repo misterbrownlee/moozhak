@@ -4,11 +4,25 @@
 
 // biome-ignore lint/correctness/noUnusedVariables: used by Alpine.js in HTML x-data
 function vinylApp() {
+  const libraryUiInitial = (() => {
+    const P = typeof window !== 'undefined' ? window.MoozhakUiPrefs : null;
+    if (P?.readLibraryUiPrefs) {
+      return P.readLibraryUiPrefs(localStorage);
+    }
+    const leg = localStorage.getItem('viewMode');
+    return {
+      subView: 'albums',
+      trackSortKey: 'trackTitle',
+      trackSortDir: 'asc',
+      viewMode: leg === 'list' || leg === 'cards' ? leg : 'cards',
+    };
+  })();
+
   return {
     // State
     loading: false,
     theme: localStorage.getItem('theme') || 'dark',
-    viewMode: localStorage.getItem('viewMode') || 'cards',
+    viewMode: libraryUiInitial.viewMode,
     toasts: [],
     libraryCache: [],
 
@@ -16,10 +30,35 @@ function vinylApp() {
     collection: [],
     collectionMetadata: null,
     collectionLoading: false,
+    /** True after the first `loadCollection()` run finishes (collection page). */
+    collectionInitialLoadComplete: false,
 
     // Modal state
     detailsData: null,
     deleteTarget: null, // Item pending deletion confirmation
+    deleteSetWarnings: [],
+
+    // Library Albums | Tracks
+    librarySubView: libraryUiInitial.subView,
+    libraryTrackRows: [],
+    libraryTrackSortKey: libraryUiInitial.trackSortKey,
+    libraryTrackSortDir: libraryUiInitial.trackSortDir,
+    /** @type {Set<string>|null} */
+    _trackMembershipSet: null,
+
+    // Set editor (/sets/:id)
+    setEditor: null,
+    setEditorStats: {
+      trackCount: 0,
+      bpmMin: null,
+      bpmMax: null,
+      bpmAverage: null,
+    },
+
+    // Add to set modal
+    addToSetContext: null,
+    addToSetPickerList: [],
+    addToSetNewName: '',
 
     // ============================================
     // Debug Logging
@@ -88,6 +127,65 @@ function vinylApp() {
       document.documentElement.setAttribute('data-theme', this.theme);
       this.loadLibraryCache();
       this.logAction('page_load', { path: window.location.pathname });
+
+      const rowsEl = document.getElementById('library-track-rows-data');
+      if (rowsEl) {
+        try {
+          this.libraryTrackRows = JSON.parse(rowsEl.textContent);
+        } catch {
+          this.libraryTrackRows = [];
+        }
+      }
+      const memEl = document.getElementById('library-membership-keys-data');
+      if (memEl) {
+        try {
+          const keys = JSON.parse(memEl.textContent);
+          this._trackMembershipSet = new Set(keys);
+        } catch {
+          this._trackMembershipSet = new Set();
+        }
+      } else {
+        this._trackMembershipSet = new Set();
+      }
+
+      const setJson = document.getElementById('set-editor-initial-json');
+      if (setJson) {
+        try {
+          this.setEditor = JSON.parse(setJson.textContent);
+          this.refreshSetEditorStats();
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      this.$watch('librarySubView', () =>
+        this.persistLibraryUiPrefsToStorage(),
+      );
+      this.$watch('libraryTrackSortKey', () =>
+        this.persistLibraryUiPrefsToStorage(),
+      );
+      this.$watch('libraryTrackSortDir', () =>
+        this.persistLibraryUiPrefsToStorage(),
+      );
+      this.$watch('viewMode', () => this.persistLibraryUiPrefsToStorage());
+
+      this.persistLibraryUiPrefsToStorage();
+    },
+
+    persistLibraryUiPrefsToStorage() {
+      const P = window.MoozhakUiPrefs;
+      if (!P?.writeLibraryUiPrefs) return;
+      try {
+        localStorage.removeItem('viewMode');
+      } catch {
+        /* ignore */
+      }
+      P.writeLibraryUiPrefs(localStorage, {
+        subView: this.librarySubView,
+        trackSortKey: this.libraryTrackSortKey,
+        trackSortDir: this.libraryTrackSortDir,
+        viewMode: this.viewMode,
+      });
     },
 
     async loadLibraryCache() {
@@ -117,7 +215,6 @@ function vinylApp() {
 
     setViewMode(mode) {
       this.viewMode = mode;
-      localStorage.setItem('viewMode', mode);
       this.logAction('view_mode_change', { mode });
     },
 
@@ -142,6 +239,7 @@ function vinylApp() {
         this.showToast(error.message, 'error');
       } finally {
         this.collectionLoading = false;
+        this.collectionInitialLoadComplete = true;
       }
     },
 
@@ -258,9 +356,281 @@ function vinylApp() {
         sides: item.sides || [],
         boxSet: item.boxSet || null,
         inLibrary: true,
+        libraryItemId: item.id,
       };
 
       this.$refs.detailsModal.showModal();
+    },
+
+    membershipKeyForRow(row) {
+      return `${row.libraryItemId}::${String(row.position ?? '').trim()}`;
+    },
+
+    isTrackRowInSet(row) {
+      if (!this._trackMembershipSet) return false;
+      return this._trackMembershipSet.has(this.membershipKeyForRow(row));
+    },
+
+    toggleLibraryTrackSort(key) {
+      if (this.libraryTrackSortKey === key) {
+        this.libraryTrackSortDir =
+          this.libraryTrackSortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        this.libraryTrackSortKey = key;
+        this.libraryTrackSortDir = 'asc';
+      }
+    },
+
+    sortedLibraryTrackRows() {
+      const rows = [...this.libraryTrackRows];
+      const key = this.libraryTrackSortKey;
+      const dir = this.libraryTrackSortDir === 'asc' ? 1 : -1;
+      const str = (v) =>
+        String(v ?? '')
+          .toLowerCase()
+          .trim();
+      const bpmCmp =
+        window.MoozhakDomain?.bpmSortComparable ||
+        ((v, asc) => {
+          if (typeof v === 'number' && Number.isFinite(v)) return v;
+          if (typeof v === 'string' && String(v).trim() !== '') {
+            const n = Number(String(v).trim());
+            if (Number.isFinite(n)) return n;
+          }
+          return asc ? Infinity : -Infinity;
+        });
+      rows.sort((a, b) => {
+        let cmp = 0;
+        if (key === 'bpm') {
+          const asc = dir === 1;
+          cmp = bpmCmp(a.bpm, asc) - bpmCmp(b.bpm, asc);
+        } else if (key === 'key') {
+          cmp = str(a.key).localeCompare(str(b.key));
+        } else if (key === 'albumTitle') {
+          cmp = str(a.albumTitle).localeCompare(str(b.albumTitle));
+        } else if (key === 'artist') {
+          cmp = str(a.artist).localeCompare(str(b.artist));
+        } else {
+          cmp = str(a.trackTitle).localeCompare(str(b.trackTitle));
+        }
+        return cmp * dir;
+      });
+      return rows;
+    },
+
+    tracksPayloadForApi(tracks) {
+      return (tracks || []).map((t) => ({
+        libraryItemId: t.libraryItemId,
+        trackPosition:
+          t.trackPosition !== undefined && t.trackPosition !== null
+            ? t.trackPosition
+            : t.position,
+      }));
+    },
+
+    async openAddToSet(ctx) {
+      this.addToSetContext = ctx;
+      this.addToSetNewName = '';
+      this.loading = true;
+      try {
+        const r = await fetch('/api/setlists');
+        const d = await r.json();
+        this.addToSetPickerList = d.setlists || [];
+      } catch {
+        this.addToSetPickerList = [];
+        this.showToast('Could not load sets', 'error');
+      } finally {
+        this.loading = false;
+      }
+      this.$refs.addToSetModal.showModal();
+    },
+
+    openAddToSetFromRow(row) {
+      this.openAddToSet({
+        libraryItemId: row.libraryItemId,
+        trackPosition: row.position,
+        trackTitle: row.trackTitle,
+      });
+    },
+
+    openAddToSetFromDetails(track) {
+      if (!this.detailsData?.libraryItemId) return;
+      this.openAddToSet({
+        libraryItemId: this.detailsData.libraryItemId,
+        trackPosition: track.position,
+        trackTitle: track.title,
+      });
+    },
+
+    closeAddToSetModal() {
+      this.addToSetContext = null;
+      this.addToSetPickerList = [];
+      this.$refs.addToSetModal.close();
+    },
+
+    async addTrackToExistingSet(setId) {
+      const ctx = this.addToSetContext;
+      if (!ctx) return;
+      this.loading = true;
+      try {
+        const gr = await fetch(`/api/setlists/${setId}`);
+        const s = await gr.json();
+        if (!gr.ok) throw new Error(s.error || 'Set not found');
+        const payload = this.tracksPayloadForApi(s.tracks);
+        const next = [...payload];
+        next.push({
+          libraryItemId: ctx.libraryItemId,
+          trackPosition: ctx.trackPosition,
+        });
+        const pr = await fetch(`/api/setlists/${setId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: s.name,
+            notes: s.notes ?? '',
+            tracks: next,
+          }),
+        });
+        const out = await pr.json();
+        if (!pr.ok) throw new Error(out.error || 'Save failed');
+        this.showToast('Added to set', 'success');
+        this.closeAddToSetModal();
+        this.$refs.detailsModal?.close();
+        window.location.reload();
+      } catch (e) {
+        this.showToast(e.message || 'Error', 'error');
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async addTrackToNewSet() {
+      const ctx = this.addToSetContext;
+      if (!ctx) return;
+      const name = (this.addToSetNewName || '').trim() || 'New set';
+      this.loading = true;
+      try {
+        const pr = await fetch('/api/setlists', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name,
+            notes: '',
+            tracks: [
+              {
+                libraryItemId: ctx.libraryItemId,
+                trackPosition: ctx.trackPosition,
+              },
+            ],
+          }),
+        });
+        const out = await pr.json();
+        if (!pr.ok) throw new Error(out.error || 'Create failed');
+        this.showToast('Set created', 'success');
+        this.closeAddToSetModal();
+        this.$refs.detailsModal?.close();
+        window.location.href = `/sets/${out.id}`;
+      } catch (e) {
+        this.showToast(e.message || 'Error', 'error');
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    refreshSetEditorStats() {
+      const tracks = this.setEditor?.tracks || [];
+      const trackCount = tracks.length;
+      const numBpm = window.MoozhakDomain?.numericBpmOrNull;
+      const bpms = tracks
+        .map((t) => {
+          if (typeof numBpm === 'function') return numBpm(t.bpm);
+          if (typeof t.bpm === 'number' && Number.isFinite(t.bpm)) return t.bpm;
+          if (typeof t.bpm === 'string' && String(t.bpm).trim() !== '') {
+            const n = Number(String(t.bpm).trim());
+            return Number.isFinite(n) ? n : null;
+          }
+          return null;
+        })
+        .filter((b) => b != null);
+      if (bpms.length === 0) {
+        this.setEditorStats = {
+          trackCount,
+          bpmMin: null,
+          bpmMax: null,
+          bpmAverage: null,
+        };
+        return;
+      }
+      const sum = bpms.reduce((a, b) => a + b, 0);
+      this.setEditorStats = {
+        trackCount,
+        bpmMin: Math.min(...bpms),
+        bpmMax: Math.max(...bpms),
+        bpmAverage: Math.round((sum / bpms.length) * 10) / 10,
+      };
+    },
+
+    moveSetTrack(index, delta) {
+      if (!this.setEditor?.tracks) return;
+      const arr = this.setEditor.tracks;
+      const j = index + delta;
+      if (j < 0 || j >= arr.length) return;
+      const t = arr[index];
+      arr[index] = arr[j];
+      arr[j] = t;
+      this.refreshSetEditorStats();
+    },
+
+    removeSetTrack(index) {
+      if (!this.setEditor?.tracks) return;
+      this.setEditor.tracks.splice(index, 1);
+      this.refreshSetEditorStats();
+    },
+
+    async saveSetEditor() {
+      if (!this.setEditor?.id) return;
+      this.loading = true;
+      try {
+        const body = {
+          name: this.setEditor.name,
+          notes: this.setEditor.notes ?? '',
+          tracks: this.tracksPayloadForApi(this.setEditor.tracks),
+        };
+        const r = await fetch(`/api/setlists/${this.setEditor.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error || 'Save failed');
+        this.setEditor = d;
+        this.refreshSetEditorStats();
+        this.showToast('Set saved', 'success');
+        window.location.reload();
+      } catch (e) {
+        this.showToast(e.message || 'Error', 'error');
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async deleteCurrentSet() {
+      if (!this.setEditor?.id) return;
+      if (!window.confirm('Delete this set permanently?')) return;
+      this.loading = true;
+      try {
+        const r = await fetch(`/api/setlists/${this.setEditor.id}`, {
+          method: 'DELETE',
+        });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error || 'Delete failed');
+        this.showToast('Set deleted', 'success');
+        window.location.href = '/sets';
+      } catch (e) {
+        this.showToast(e.message || 'Error', 'error');
+      } finally {
+        this.loading = false;
+      }
     },
 
     /**
@@ -383,13 +753,23 @@ function vinylApp() {
     /**
      * Show delete confirmation modal
      */
-    deleteItem(id) {
+    async deleteItem(id) {
       const item = this.libraryCache.find((i) => i.id === id);
       if (!item) {
         this.showToast('Item not found', 'error');
         return;
       }
       this.deleteTarget = item;
+      this.deleteSetWarnings = [];
+      try {
+        const r = await fetch(`/api/library/${id}/set-usage`);
+        const d = await r.json();
+        if (r.ok && Array.isArray(d.sets)) {
+          this.deleteSetWarnings = d.sets;
+        }
+      } catch {
+        /* ignore */
+      }
       this.$refs.deleteModal.showModal();
     },
 
@@ -398,6 +778,7 @@ function vinylApp() {
      */
     cancelDelete() {
       this.deleteTarget = null;
+      this.deleteSetWarnings = [];
       this.$refs.deleteModal.close();
     },
 

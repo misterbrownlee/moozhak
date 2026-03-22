@@ -28,7 +28,8 @@ open http://localhost:3000
 - **Box Sets** - Automatically splits box sets into individual album entries
 - **View Modes** - Toggle between card and list views for library and collection
 - **Edit** - Modify album details (title, artist, year, format, notes)
-- **Delete** - Remove albums from your library
+- **Delete** - Remove albums from your library (with a warning if any set references that album’s tracks)
+- **Sets** - Build ordered **sets** of library tracks; **Albums | Tracks** on the Library page with sortable track rows and “in set” indicator; add tracks to a set from the tracks table or album details
 - **Print Cards** - Generate printable track listings (4" wide, optimized for print)
 - **Themes** - DaisyUI themes are wired in CSS (`data-theme` on `<html>`); the navbar theme picker is currently **commented out** in `layouts/main.ejs`, so the default theme is fixed unless you enable it or change `data-theme` in the layout.
 - **BPM Lookup** - Look up tempo, key, and time signature for all tracks on an album (requires GetSongBPM key in Settings or header)
@@ -58,7 +59,9 @@ npm run web:css:watch   # Watch and rebuild CSS (aliases: css:watch)
 | Route | Description |
 |-------|-------------|
 | `GET /` | Search page (use `?q=query` to search) |
-| `GET /library` | Library page (card/list view toggle) |
+| `GET /library` | Library page (card/list view; **Albums \| Tracks** segmented view) |
+| `GET /sets` | **My sets** — list/create sets |
+| `GET /sets/:id` | Single set editor (ordered tracks, name, notes) |
 | `GET /library/:id/edit` | Edit album and track details |
 | `GET /collection` | Discogs collection page |
 | `GET /settings` | Settings (credentials stored in SQLite) |
@@ -74,6 +77,7 @@ npm run web:css:watch   # Watch and rebuild CSS (aliases: css:watch)
 | `/api/library` | GET | Get all library items |
 | `/api/library/export` | GET | Export library as JSON (`version`, `updatedAt`, `items`) |
 | `/api/library/import` | POST | Replace library from JSON body `{ "items": [...] }` |
+| `/api/library/:id/set-usage` | GET | Which **sets** reference this library album: `{ "sets": [{ "id", "name" }] }` (empty when none). Used before delete confirmation. |
 | `/api/library/:id` | GET | Get single library item |
 | `/api/library` | POST | Add item to library (handles box sets automatically) |
 | `/api/library/:id` | PUT | Update library item |
@@ -87,6 +91,26 @@ npm run web:css:watch   # Watch and rebuild CSS (aliases: css:watch)
 | `/api/settings` | GET | Settings editor shape: `discogsUsername`, `discogsToken`, `getBpmApiKey`, plus `discogsTokenSet` / `getSongBpmKeySet` flags (full secrets included for the local Settings UI—avoid exposing this endpoint beyond trusted use) |
 | `/api/settings` | PUT | Update defaults; JSON body may include `discogsToken`, `discogsUsername`, `getBpmApiKey` (empty string clears that stored value when the field is sent) |
 | `/api/log` | POST | Log client-side user actions |
+
+### Sets API
+
+User-facing copy uses **set** / **sets**; persistence uses the `setlists` table and `/api/setlists` paths.
+
+| Route | Method | Description |
+|-------|--------|-------------|
+| `/api/setlists` | GET | List all sets (newest `updatedAt` first). Each item includes derived `stats` (`trackCount`, BPM min/max/average when applicable). |
+| `/api/setlists/:id` | GET | Single set document |
+| `/api/setlists` | POST | Create empty or initial set; body `{ "name", "notes"?, "tracks"? }`. `notes` max **300** characters (trimmed). |
+| `/api/setlists/:id` | PUT | **Canonical update:** full document `{ "name", "notes", "tracks": [...] }`. **All** membership changes and **reordering** use this route with the **complete ordered** `tracks` array. Each track entry is `{ "libraryItemId", "trackPosition" }` (plus denormalized fields returned on read). Server resolves rows against the library, recomputes `thumbUrls` (2×2 mosaic rules), validates notes length. |
+| `/api/setlists/:id` | DELETE | Remove set |
+
+There are **no** `POST`/`DELETE` …`/tracks` routes in this version—clients always send the full `tracks` array on `PUT`.
+
+#### Possible improvements (Sets, not implemented)
+
+1. **Granular track routes:** Optional `POST /api/setlists/:id/tracks` and `DELETE /api/setlists/:id/tracks/:idx` as **thin wrappers** that load the set, adjust `tracks` in memory, and call the **same** internal save pipeline as **PUT `/api/setlists/:id`**. **Canonical representation remains PUT with full `tracks`.** Add tests that prove wrappers and PUT stay aligned.
+2. **Library Tracks — rich membership UI:** Extend data so the “in set” indicator can show a **tooltip** with **which sets** contain the track (names/links). MVP only exposes boolean membership.
+3. **Album detail — “Show sets”:** From the library item details view, list or link to sets that contain any track from that album.
 
 ## API credentials (Discogs + GetSongBPM)
 
@@ -167,7 +191,9 @@ web/
 │   │   ├── view-toggle.ejs   # Card/list view toggle buttons
 │   │   └── modals.ejs        # Edit and details modal dialogs
 │   ├── index.ejs             # Search page
-│   ├── library.ejs           # Library page (card/list views)
+│   ├── library.ejs           # Library page (card/list; Albums \| Tracks)
+│   ├── setlists.ejs          # Sets list
+│   ├── setlist.ejs           # Single set editor
 │   ├── collection.ejs        # Discogs collection page
 │   ├── settings.ejs          # SQLite-backed defaults (Discogs + GetSongBPM)
 │   ├── edit.ejs              # Edit album details page
@@ -175,7 +201,9 @@ web/
 ├── public/                   # Static files
 │   ├── app.js                # Client-side JavaScript (vinylApp)
 │   ├── moozhak-domain.js     # Copy of core/domain/library.js (sync:domain)
+│   ├── moozhak-ui-prefs.js   # Copy of web/lib/client/ui-prefs.js (sync:domain)
 │   ├── init-moozhak-domain.js # Loads domain onto window for Alpine
+│   ├── init-moozhak-ui-prefs.js # Loads MoozhakUiPrefs onto window for Alpine
 │   └── styles.css            # Generated Tailwind CSS
 ├── routes/
 │   └── api.js                # REST API routes
@@ -186,8 +214,11 @@ web/
 │   ├── discogsRuntime.js     # Per-request Discogs client (API + SSR)
 │   ├── persistence/          # SQLite implementation + README
 │   ├── library.js            # Library facade (SQLite)
+│   ├── setlists.js           # Sets facade (SQLite `setlists` JSON rows)
 │   ├── collection.js         # Collection cache facade (SQLite)
-│   └── webLogger.js          # Request/action logging
+│   ├── webLogger.js          # Request/action logging
+│   └── client/               # Browser-only helpers (synced to public/*.js)
+│       └── ui-prefs.js       # Namespaced localStorage for library UI (subview, track sort)
 └── server.js                 # listen() entry (uses createApp)
 ```
 
@@ -225,12 +256,13 @@ Include reusable components with data:
 | `item-card` | `item`, `type` ('library' or 'collection'), `inLibrary` |
 | `item-list-row` | `item`, `type` ('library' or 'collection'), `inLibrary` |
 | `view-toggle` | (no params - uses Alpine.js `viewMode` state) |
-| `modals` | (no params - includes edit and details modal dialogs) |
+| `modals` | (no params - includes edit, details, add-to-set, and delete modal dialogs) |
+| `setlist-thumb` | `thumbUrls` (string array), `vinylIconSvg` — 2×2 thumb grid or vinyl fallback |
 
 ### Layout System
 
 Pages are automatically wrapped in `layouts/main.ejs` (including `print`) unless `res.render` is called with `layout: false`. The layout includes:
-- Navigation bar (Search, Collection, Library, Settings)
+- Navigation bar (Search, Collection, Library, Sets, Settings)
 - Theme selector markup (**commented out** in the template; default `data-theme` remains)
 - Loading indicator
 - Toast notifications

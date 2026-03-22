@@ -1,0 +1,17 @@
+<%#
+  Apply data-theme from localStorage before first paint so DaisyUI tokens match
+  vinylApp() (see web/public/app.js theme + init). Avoids a flash when stored
+  theme differs from the server default on <html>.
+%>
+<script>
+(function () {
+  try {
+    var stored = localStorage.getItem('theme');
+    if (stored) {
+      document.documentElement.setAttribute('data-theme', stored);
+    }
+  } catch (e) {
+    /* ignore */
+  }
+})();
+</script>

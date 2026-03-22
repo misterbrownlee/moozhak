@@ -2,10 +2,16 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
+import {
+  buildTrackSetMembershipIndex,
+  calculateSetStats,
+  flattenLibraryToTrackRows,
+} from '../core/domain/setlists.js';
 import { searchDiscogs } from '../core/services/discogs.js';
 import { discogsSetupStatusFromDb } from './lib/appSettings.js';
 import { getDiscogsContextForSsr } from './lib/discogsRuntime.js';
 import { getLibraryItem, loadLibrary } from './lib/library.js';
+import { getSetlist, loadSetlists } from './lib/setlists.js';
 import { requestLogger } from './lib/webLogger.js';
 import apiRoutes from './routes/api.js';
 
@@ -18,6 +24,14 @@ export function createApp() {
   const app = express();
   app.locals.gearIconSvg = readFileSync(
     join(__dirname, 'src/icons/gear.svg'),
+    'utf-8',
+  );
+  app.locals.vinylIconSvg = readFileSync(
+    join(__dirname, 'src/icons/vinyl.svg'),
+    'utf-8',
+  );
+  app.locals.noteIconSvg = readFileSync(
+    join(__dirname, 'src/icons/note.svg'),
     'utf-8',
   );
 
@@ -56,7 +70,9 @@ export function createApp() {
 
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
-  app.use(express.static(join(__dirname, 'public')));
+  const staticMaxAge =
+    process.env.NODE_ENV === 'production' ? 86_400_000 /* 1 day */ : 0;
+  app.use(express.static(join(__dirname, 'public'), { maxAge: staticMaxAge }));
 
   app.use(requestLogger());
 
@@ -108,9 +124,42 @@ export function createApp() {
 
   function handleLibraryPage(_req, res) {
     const items = loadLibrary();
+    const trackRows = flattenLibraryToTrackRows(items);
+    const membership = buildTrackSetMembershipIndex(loadSetlists());
+    const membershipKeys = [...membership].map((k) => k);
     res.render('library', {
       activeView: 'library',
       items,
+      trackRows,
+      membershipKeys,
+      ...discogsSetupStatusFromDb(),
+    });
+  }
+
+  function handleSetsPage(_req, res) {
+    const raw = loadSetlists();
+    const setlists = raw.map((doc) => ({
+      ...doc,
+      stats: calculateSetStats(doc.tracks || []),
+    }));
+    res.render('setlists', {
+      activeView: 'sets',
+      setlists,
+      ...discogsSetupStatusFromDb(),
+    });
+  }
+
+  function handleSetDetailPage(req, res) {
+    const doc = getSetlist(req.params.id);
+    if (!doc) {
+      return res.status(404).send('Set not found');
+    }
+    const stats = calculateSetStats(doc.tracks || []);
+    res.render('setlist', {
+      activeView: 'set',
+      set: doc,
+      stats,
+      initialSetJson: JSON.stringify(doc),
       ...discogsSetupStatusFromDb(),
     });
   }
@@ -157,6 +206,8 @@ export function createApp() {
   app.get('/', handleSearchPage);
   app.get('/library', handleLibraryPage);
   app.get('/library/:id/edit', handleEditPage);
+  app.get('/sets', handleSetsPage);
+  app.get('/sets/:id', handleSetDetailPage);
   app.get('/collection', handleCollectionPage);
 
   app.get('/settings', (_req, res) => {

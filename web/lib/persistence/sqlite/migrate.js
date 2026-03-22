@@ -1,3 +1,8 @@
+import {
+  normalizeLibraryItemTrackBpms,
+  normalizeSetlistTrackBpms,
+} from '../../../../core/domain/library.js';
+
 /**
  * Apply schema migrations in order.
  * @param {import('better-sqlite3').Database} db
@@ -41,5 +46,55 @@ export function applyMigrations(db) {
       );
     `);
     db.prepare('INSERT INTO schema_migrations (version) VALUES (2)').run();
+  }
+  if (current < 3) {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS setlists (
+        id TEXT PRIMARY KEY NOT NULL,
+        setlist_json TEXT NOT NULL,
+        created_at TEXT,
+        updated_at TEXT
+      );
+    `);
+    db.prepare('INSERT INTO schema_migrations (version) VALUES (3)').run();
+  }
+  if (current < 4) {
+    const now = new Date().toISOString();
+    const tx = db.transaction(() => {
+      const libRows = db.prepare('SELECT id, item_json FROM library_items').all();
+      const updateLib = db.prepare(
+        'UPDATE library_items SET item_json = ?, updated_at = ? WHERE id = ?',
+      );
+      for (const row of libRows) {
+        let item;
+        try {
+          item = JSON.parse(row.item_json);
+        } catch {
+          continue;
+        }
+        if (!normalizeLibraryItemTrackBpms(item)) continue;
+        item.updatedAt = now;
+        updateLib.run(JSON.stringify(item), now, row.id);
+      }
+
+      const setRows = db.prepare('SELECT id, setlist_json FROM setlists').all();
+      const updateSet = db.prepare(
+        'UPDATE setlists SET setlist_json = ?, updated_at = ? WHERE id = ?',
+      );
+      for (const row of setRows) {
+        let doc;
+        try {
+          doc = JSON.parse(row.setlist_json);
+        } catch {
+          continue;
+        }
+        if (!normalizeSetlistTrackBpms(doc)) continue;
+        doc.updatedAt = now;
+        updateSet.run(JSON.stringify(doc), now, row.id);
+      }
+
+      db.prepare('INSERT INTO schema_migrations (version) VALUES (4)').run();
+    });
+    tx();
   }
 }

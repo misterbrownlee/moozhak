@@ -3,12 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <%- include('../partials/theme-head-boot') %>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/vinyl180.png" sizes="180x180">
   <title><%= typeof title !== 'undefined' ? title + ' - ' : '' %>Vinyl Library</title>
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="preload" href="/styles.css" as="style">
+  <link rel="stylesheet" href="/styles.css" blocking="render">
   <script type="module" src="/init-moozhak-domain.js"></script>
+  <script type="module" src="/init-moozhak-ui-prefs.js"></script>
   <script defer src="/app.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <style>
+    [x-cloak] { display: none !important; }
     @media print {
       body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0 !important; padding: 0 !important; }
       main { padding: 0 !important; margin: 0 !important; max-width: none !important; }
@@ -24,14 +30,21 @@
 <body class="min-h-screen bg-base-200" x-data="vinylApp()">
   <!-- Navbar -->
   <nav class="navbar bg-base-100 shadow-lg no-print">
-    <div class="flex-1">
-      <a href="/" class="btn btn-ghost text-xl">🎵 Vinyl Library</a>
+    <div class="flex-1 flex items-center gap-2">
+      <a href="/" class="btn btn-ghost text-xl gap-2">
+        <% if (typeof noteIconSvg !== 'undefined' && noteIconSvg) { %>
+          <span class="inline-flex shrink-0 items-center justify-center [&_svg]:w-7 [&_svg]:h-7" aria-hidden="true"><%- noteIconSvg %></span>
+        <% } %>
+        <span>Vinyl Library</span>
+      </a>
+      <%- include('../partials/view-toggle') %>
     </div>
     <div class="flex-none">
       <ul class="menu menu-horizontal px-1">
         <li><a href="/" class="btn btn-ghost <%= typeof activeView !== 'undefined' && activeView === 'search' ? 'btn-active' : '' %>">Search</a></li>
         <li><a href="/collection" class="btn btn-ghost <%= typeof activeView !== 'undefined' && activeView === 'collection' ? 'btn-active' : '' %>">Collection</a></li>
         <li><a href="/library" class="btn btn-ghost <%= typeof activeView !== 'undefined' && activeView === 'library' ? 'btn-active' : '' %>">Library</a></li>
+        <li><a href="/sets" class="btn btn-ghost <%= typeof activeView !== 'undefined' && (activeView === 'sets' || activeView === 'set') ? 'btn-active' : '' %>">Sets</a></li>
         <li>
           <a href="/settings" title="Settings" class="btn btn-ghost <%= typeof activeView !== 'undefined' && activeView === 'settings' ? 'btn-active' : '' %>">
             <span class="sr-only">Settings</span>

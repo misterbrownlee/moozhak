@@ -185,3 +185,105 @@ export function mergeBpmIntoSides(sides, bpmTracks) {
     }),
   }));
 }
+
+/**
+ * Parse track BPM for edit/save: empty → null, finite number or numeric string → number, else invalid.
+ * @param {unknown} raw
+ * @returns {{ valid: false } | { valid: true, value: number | null }}
+ */
+export function parseTrackBpm(raw) {
+  if (raw == null || raw === '') return { valid: true, value: null };
+  if (typeof raw === 'number') {
+    return Number.isFinite(raw) ? { valid: true, value: raw } : { valid: false };
+  }
+  const s = String(raw).trim();
+  if (s === '') return { valid: true, value: null };
+  const n = Number(s);
+  if (!Number.isFinite(n)) return { valid: false };
+  return { valid: true, value: n };
+}
+
+/**
+ * Coerce stored track BPM to a finite number for sorting/stats, or null if missing/invalid.
+ * @param {unknown} raw
+ * @returns {number|null}
+ */
+export function numericBpmOrNull(raw) {
+  const p = parseTrackBpm(raw);
+  if (!p.valid || p.value == null) return null;
+  return p.value;
+}
+
+/**
+ * Comparable value for BPM column sort (library UI). Missing/invalid sort to end for both directions.
+ * @param {unknown} raw
+ * @param {boolean} ascending
+ * @returns {number}
+ */
+export function bpmSortComparable(raw, ascending) {
+  const n = numericBpmOrNull(raw);
+  if (n != null) return n;
+  return ascending ? Infinity : -Infinity;
+}
+
+/**
+ * BPM value suitable for JSON persistence: finite number or null (invalid/empty).
+ * @param {unknown} raw
+ * @returns {number|null}
+ */
+export function normalizeStoredBpmValue(raw) {
+  const p = parseTrackBpm(raw);
+  if (!p.valid) return null;
+  return p.value;
+}
+
+/**
+ * Mutates library item `sides[].tracks[].bpm` to normalized number|null.
+ * @param {Record<string, unknown>} item
+ * @returns {boolean} true if any track was updated
+ */
+export function normalizeLibraryItemTrackBpms(item) {
+  if (!item || typeof item !== 'object') return false;
+  const sides = item.sides;
+  if (!Array.isArray(sides)) return false;
+  let changed = false;
+  for (const side of sides) {
+    if (!side || typeof side !== 'object') continue;
+    const tracks = side.tracks;
+    if (!Array.isArray(tracks)) continue;
+    for (const track of tracks) {
+      if (!track || typeof track !== 'object') continue;
+      if (!Object.prototype.hasOwnProperty.call(track, 'bpm')) continue;
+      const before = track.bpm;
+      const next = normalizeStoredBpmValue(before);
+      if (!Object.is(before, next)) {
+        track.bpm = next;
+        changed = true;
+      }
+    }
+  }
+  return changed;
+}
+
+/**
+ * Mutates setlist `tracks[].bpm` to normalized number|null.
+ * @param {Record<string, unknown>} doc
+ * @returns {boolean} true if any track was updated
+ */
+export function normalizeSetlistTrackBpms(doc) {
+  if (!doc || typeof doc !== 'object') return false;
+  const tracks = doc.tracks;
+  if (!Array.isArray(tracks)) return false;
+  let changed = false;
+  for (const track of tracks) {
+    if (!track || typeof track !== 'object') continue;
+    if (!Object.prototype.hasOwnProperty.call(track, 'bpm')) continue;
+    const before = track.bpm;
+    const next = normalizeStoredBpmValue(before);
+    if (!Object.is(before, next)) {
+      track.bpm = next;
+      changed = true;
+    }
+  }
+  return changed;
+}

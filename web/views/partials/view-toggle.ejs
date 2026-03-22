@@ -1,10 +1,15 @@
 <%#
   View Toggle Partial - Toggle between card and list views
+  Static btn + join-item classes avoid unstyled <button> before Alpine hydrates (layout shift / focus flash).
+  view-toggle-boot.ejs applies btn-active from localStorage before paint (see ui-prefs readLibraryUiPrefs).
 %>
-<div class="join">
+<div class="join shrink-0">
   <button 
+    type="button"
+    id="mzk-view-toggle-cards"
+    class="btn btn-sm join-item"
+    :class="{ 'btn-active': viewMode === 'cards' }"
     @click="setViewMode('cards')" 
-    :class="viewMode === 'cards' ? 'btn btn-sm btn-active join-item' : 'btn btn-sm join-item'"
     title="Card View"
   >
     <!-- Grid/Cards icon -->
@@ -16,8 +21,11 @@
     </svg>
   </button>
   <button 
+    type="button"
+    id="mzk-view-toggle-list"
+    class="btn btn-sm join-item"
+    :class="{ 'btn-active': viewMode === 'list' }"
     @click="setViewMode('list')" 
-    :class="viewMode === 'list' ? 'btn btn-sm btn-active join-item' : 'btn btn-sm join-item'"
     title="List View"
   >
     <!-- List icon -->
@@ -31,3 +39,4 @@
     </svg>
   </button>
 </div>
+<%- include('view-toggle-boot') %>

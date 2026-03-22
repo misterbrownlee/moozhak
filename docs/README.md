@@ -8,6 +8,10 @@ This directory is organized by ownership so docs stay aligned with the codebase 
 - [Module Boundaries](./architecture/module-boundaries.md)
 - [Refactor Roadmap](./architecture/refactor-roadmap.md)
 
+## Web app
+
+- [Moozhak Web README](../web/README.md) — routes, API (including **Sets** and possible improvements)
+
 ## Testing
 
 - [Testing Strategy](./testing/strategy.md)

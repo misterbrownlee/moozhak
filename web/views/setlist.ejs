@@ -1,0 +1,88 @@
+<%# Single set editor %>
+<%- include('partials/discogs-config-warning') %>
+
+<script type="application/json" id="set-editor-initial-json"><%- initialSetJson %></script>
+
+<div class="mb-6" x-show="setEditor" x-cloak>
+  <div class="flex flex-col md:flex-row gap-6">
+    <div class="w-full md:w-48 flex-shrink-0">
+      <template x-if="setEditor && setEditor.thumbUrls && setEditor.thumbUrls.length === 4">
+        <div class="grid grid-cols-2 gap-px aspect-square rounded-lg overflow-hidden bg-base-300 ring-1 ring-base-300">
+          <template x-for="(u, i) in setEditor.thumbUrls" :key="i">
+            <img :src="u" alt="" class="w-full h-full object-cover min-h-0" loading="lazy" />
+          </template>
+        </div>
+      </template>
+      <template x-if="setEditor && (!setEditor.thumbUrls || setEditor.thumbUrls.length !== 4)">
+        <div class="aspect-square rounded-lg bg-base-300 flex items-center justify-center p-6 vinyl-thumb-fallback">
+          <% if (typeof vinylIconSvg !== 'undefined' && vinylIconSvg) { %>
+            <div class="w-full h-full flex items-center justify-center [&_svg]:max-w-[min(100%,8rem)] [&_svg]:max-h-[min(100%,8rem)] opacity-90"><%- vinylIconSvg %></div>
+          <% } else { %>
+            <span class="text-4xl">🎵</span>
+          <% } %>
+        </div>
+      </template>
+    </div>
+    <div class="flex-1 space-y-4">
+      <div class="flex flex-wrap justify-between gap-2 items-start">
+        <div class="flex-1 min-w-[12rem]">
+          <label class="label"><span class="label-text">Set name</span></label>
+          <input type="text" class="input input-bordered w-full max-w-xl" x-model="setEditor.name" />
+        </div>
+        <div class="flex gap-2 mt-8">
+          <button type="button" class="btn btn-primary" @click="saveSetEditor()">Save</button>
+          <button type="button" class="btn btn-ghost text-error" @click="deleteCurrentSet()">Delete set</button>
+        </div>
+      </div>
+      <div>
+        <label class="label"><span class="label-text">Notes</span> <span class="label-text-alt"><span x-text="(setEditor.notes || '').length"></span>/300</span></label>
+        <textarea class="textarea textarea-bordered w-full max-w-2xl h-24" x-model="setEditor.notes" maxlength="300" placeholder="Optional notes…"></textarea>
+      </div>
+      <div class="flex flex-wrap gap-2 text-sm">
+        <span class="badge badge-outline" x-text="'Tracks: ' + (setEditor.tracks?.length || 0)"></span>
+        <span class="badge badge-outline" x-text="'BPM range: ' + (setEditorStats.bpmMin != null ? setEditorStats.bpmMin + ' – ' + setEditorStats.bpmMax : '—')"></span>
+        <span class="badge badge-outline" x-text="'BPM avg: ' + (setEditorStats.bpmAverage != null ? setEditorStats.bpmAverage : '—')"></span>
+      </div>
+    </div>
+  </div>
+
+  <h3 class="text-lg font-semibold mt-8 mb-2">Tracks</h3>
+  <p class="text-sm text-base-content/60 mb-4">Reorder with ↑ ↓. Remove with ✕. Add tracks from <a href="/library" class="link">Library</a> (Tracks view or album details).</p>
+  <div class="overflow-x-auto">
+    <table class="table table-zebra table-sm">
+      <thead>
+        <tr>
+          <th class="w-12">#</th>
+          <th>Title</th>
+          <th>Artist</th>
+          <th>Album</th>
+          <th class="text-right">BPM</th>
+          <th class="text-center">Key</th>
+          <th class="w-28">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="(tr, idx) in (setEditor.tracks || [])" :key="idx">
+          <tr>
+            <td x-text="idx + 1"></td>
+            <td x-text="tr.title"></td>
+            <td x-text="tr.artist"></td>
+            <td x-text="tr.albumTitle"></td>
+            <td class="text-right" x-text="tr.bpm ?? '—'"></td>
+            <td class="text-center" x-text="tr.key ?? '—'"></td>
+            <td>
+              <div class="flex gap-1">
+                <button type="button" class="btn btn-ghost btn-xs" @click="moveSetTrack(idx, -1)" :disabled="idx === 0">↑</button>
+                <button type="button" class="btn btn-ghost btn-xs" @click="moveSetTrack(idx, 1)" :disabled="idx >= (setEditor.tracks.length - 1)">↓</button>
+                <button type="button" class="btn btn-ghost btn-xs text-error" @click="removeSetTrack(idx)">✕</button>
+              </div>
+            </td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </div>
+  <template x-if="!setEditor.tracks || setEditor.tracks.length === 0">
+    <p class="text-base-content/50 py-4">No tracks yet.</p>
+  </template>
+</div>

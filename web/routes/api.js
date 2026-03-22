@@ -7,6 +7,13 @@ import {
   normalizeLibraryItem,
 } from '../../core/domain/library.js';
 import {
+  calculateSetStats,
+  denormalizeTrackFromLibraryItem,
+  findSetsReferencingLibraryItemId,
+  pickSetThumbUrls,
+  validateSetNotes,
+} from '../../core/domain/setlists.js';
+import {
   getCollection,
   getMaster,
   getRelease,
@@ -42,6 +49,14 @@ import {
   replaceLibraryItems,
   updateLibraryItem,
 } from '../lib/library.js';
+import {
+  addSetlist,
+  generateSetlistId,
+  getSetlist,
+  loadSetlists,
+  removeSetlist,
+  updateSetlist,
+} from '../lib/setlists.js';
 import { logUserAction } from '../lib/webLogger.js';
 
 const router = express.Router();
@@ -303,6 +318,19 @@ router.post(
 );
 
 router.get(
+  '/library/:id/set-usage',
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    if (!getLibraryItem(id)) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+    const sets = loadSetlists();
+    const affected = findSetsReferencingLibraryItemId(sets, id);
+    res.json({ sets: affected });
+  }),
+);
+
+router.get(
   '/library/:id',
   asyncHandler(async (req, res) => {
     const item = getLibraryItem(req.params.id);
@@ -534,6 +562,157 @@ router.post(
         year: result.song.year,
       },
     });
+  }),
+);
+
+// ============================================
+// Sets (setlists) — tracks updated via PUT with full document
+// ============================================
+
+function normalizeSetTracksFromBody(bodyTracks) {
+  if (!Array.isArray(bodyTracks)) {
+    const e = new Error('tracks must be an array');
+    e.statusCode = 400;
+    throw e;
+  }
+  const out = [];
+  for (let i = 0; i < bodyTracks.length; i++) {
+    const row = bodyTracks[i];
+    const lid = row.libraryItemId;
+    const pos =
+      row.trackPosition !== undefined && row.trackPosition !== null
+        ? row.trackPosition
+        : row.position;
+    if (!lid || pos === undefined || pos === null) {
+      const e = new Error(
+        `tracks[${i}]: libraryItemId and trackPosition are required`,
+      );
+      e.statusCode = 400;
+      throw e;
+    }
+    const item = getLibraryItem(String(lid));
+    if (!item) {
+      const e = new Error(`Library item not found: ${lid}`);
+      e.statusCode = 400;
+      throw e;
+    }
+    const snap = denormalizeTrackFromLibraryItem(item, String(pos));
+    if (!snap) {
+      const e = new Error(
+        `Track position "${pos}" not found on library item ${lid}`,
+      );
+      e.statusCode = 400;
+      throw e;
+    }
+    out.push(snap);
+  }
+  return out;
+}
+
+function enrichSetlist(doc) {
+  if (!doc) return null;
+  const stats = calculateSetStats(doc.tracks || []);
+  return { ...doc, stats };
+}
+
+function persistSetFromBody(id, body, existing) {
+  const notesSource =
+    body.notes !== undefined ? body.notes : (existing?.notes ?? '');
+  const notesCheck = validateSetNotes(notesSource);
+  if (!notesCheck.ok) {
+    const e = new Error(notesCheck.error);
+    e.statusCode = 400;
+    throw e;
+  }
+  const name =
+    typeof body.name === 'string' && body.name.trim()
+      ? body.name.trim()
+      : existing?.name && String(existing.name).trim()
+        ? String(existing.name).trim()
+        : 'Untitled set';
+  let tracks;
+  if (body.tracks !== undefined) {
+    tracks = normalizeSetTracksFromBody(body.tracks);
+  } else {
+    tracks = Array.isArray(existing?.tracks) ? existing.tracks : [];
+  }
+  const thumbUrls = pickSetThumbUrls(tracks);
+  const now = new Date().toISOString();
+  const createdAt = existing?.createdAt || now;
+  return {
+    id,
+    name,
+    notes: notesCheck.value,
+    tracks,
+    thumbUrls,
+    createdAt,
+    updatedAt: now,
+  };
+}
+
+router.get(
+  '/setlists',
+  asyncHandler(async (_req, res) => {
+    const list = loadSetlists().map((doc) => enrichSetlist(doc));
+    res.json({ setlists: list });
+  }),
+);
+
+router.get(
+  '/setlists/:id',
+  asyncHandler(async (req, res) => {
+    const doc = getSetlist(req.params.id);
+    if (!doc) {
+      return res.status(404).json({ error: 'Set not found' });
+    }
+    res.json(enrichSetlist(doc));
+  }),
+);
+
+router.post(
+  '/setlists',
+  asyncHandler(async (req, res) => {
+    const id = generateSetlistId();
+    let doc;
+    try {
+      doc = persistSetFromBody(id, req.body, null);
+    } catch (e) {
+      return res.status(e.statusCode || 400).json({ error: e.message });
+    }
+    addSetlist(doc);
+    logUserAction('setlist_create', { id });
+    res.status(201).json(enrichSetlist(doc));
+  }),
+);
+
+router.put(
+  '/setlists/:id',
+  asyncHandler(async (req, res) => {
+    const existing = getSetlist(req.params.id);
+    if (!existing) {
+      return res.status(404).json({ error: 'Set not found' });
+    }
+    let doc;
+    try {
+      doc = persistSetFromBody(req.params.id, req.body, existing);
+    } catch (e) {
+      return res.status(e.statusCode || 400).json({ error: e.message });
+    }
+    updateSetlist(req.params.id, doc);
+    logUserAction('setlist_update', { id: req.params.id });
+    res.json(enrichSetlist(doc));
+  }),
+);
+
+router.delete(
+  '/setlists/:id',
+  asyncHandler(async (req, res) => {
+    const ok = removeSetlist(req.params.id);
+    if (!ok) {
+      return res.status(404).json({ error: 'Set not found' });
+    }
+    logUserAction('setlist_delete', { id: req.params.id });
+    res.json({ success: true });
   }),
 );
 

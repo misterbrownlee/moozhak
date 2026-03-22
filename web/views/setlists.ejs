@@ -1,0 +1,58 @@
+<%# Sets list %>
+<%- include('partials/discogs-config-warning') %>
+
+<div class="flex justify-between items-center mb-6">
+  <h2 class="text-2xl font-bold">Sets</h2>
+  <button type="button" class="btn btn-primary" id="sets-new-btn">New set</button>
+</div>
+
+<% if (!setlists || setlists.length === 0) { %>
+  <div class="text-center py-12">
+    <p class="text-lg text-base-content/60">No sets yet.</p>
+    <p class="text-sm text-base-content/40 mt-2">Create a set from the Library (Tracks view or album details) or click New set.</p>
+  </div>
+<% } else { %>
+  <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <% setlists.forEach(function (s) {
+      const st = s.stats || { trackCount: 0, bpmMin: null, bpmMax: null, bpmAverage: null };
+      const bpmRange = st.bpmMin != null && st.bpmMax != null ? st.bpmMin + ' – ' + st.bpmMax : '—';
+      const bpmAvg = st.bpmAverage != null ? String(st.bpmAverage) : '—';
+    %>
+      <a href="/sets/<%= s.id %>" class="card bg-base-100 shadow-md hover:shadow-lg transition-shadow border border-base-300">
+        <figure class="px-4 pt-4 max-h-48">
+          <%- include('partials/setlist-thumb', { thumbUrls: s.thumbUrls, vinylIconSvg: typeof vinylIconSvg !== 'undefined' ? vinylIconSvg : '' }) %>
+        </figure>
+        <div class="card-body">
+          <h3 class="card-title text-lg line-clamp-2"><%= s.name || 'Untitled set' %></h3>
+          <% if (s.notes) { %>
+            <p class="text-sm text-base-content/60 line-clamp-2"><%= s.notes %></p>
+          <% } %>
+          <div class="flex flex-wrap gap-2 text-xs mt-2">
+            <span class="badge badge-ghost"><%= st.trackCount %> tracks</span>
+            <span class="badge badge-ghost">BPM <%= bpmRange %></span>
+            <span class="badge badge-ghost">Avg <%= bpmAvg %></span>
+          </div>
+        </div>
+      </a>
+    <% }); %>
+  </div>
+<% } %>
+
+<script>
+  document.getElementById('sets-new-btn')?.addEventListener('click', function () {
+    fetch('/api/setlists', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'New set', notes: '', tracks: [] }),
+    })
+      .then(function (r) {
+        return r.json().then(function (d) {
+          if (!r.ok) throw new Error(d.error || 'Failed');
+          window.location.href = '/sets/' + d.id;
+        });
+      })
+      .catch(function () {
+        alert('Could not create set');
+      });
+  });
+</script>

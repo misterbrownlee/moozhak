@@ -10,10 +10,9 @@
       </template>
     </div>
     <div class="flex items-center gap-2">
-      <template x-if="collection.length > 0">
-        <%- include('partials/view-toggle') %>
-      </template>
       <button 
+        x-show="collectionInitialLoadComplete"
+        x-cloak
         @click="syncCollection()" 
         class="btn btn-primary btn-sm"
         :disabled="collectionLoading"
@@ -54,7 +53,7 @@
   <template x-if="collection.length > 0">
     <div>
       <!-- Card View -->
-      <div x-show="viewMode === 'cards'" class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div x-show="viewMode === 'cards'" x-cloak class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <template x-for="item in collection" :key="item.instanceId">
           <div class="card relative overflow-hidden shadow-md hover:shadow-lg transition-shadow cursor-pointer aspect-square rounded-lg" @click="viewCollectionItem(item)">
             <figure class="absolute inset-0">
@@ -89,7 +88,7 @@
       </div>
 
       <!-- List View -->
-      <div x-show="viewMode === 'list'" class="grid gap-4">
+      <div x-show="viewMode === 'list'" x-cloak class="grid gap-4">
         <template x-for="item in collection" :key="item.instanceId">
           <div class="card card-side bg-base-100 shadow-md hover:shadow-lg transition-shadow cursor-pointer" @click="viewCollectionItem(item)">
             <figure class="w-24 h-24 flex-shrink-0 m-4">

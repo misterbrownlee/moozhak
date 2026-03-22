@@ -4,7 +4,7 @@
 
 - `core/` holds Discogs/BPM (and related) wrappers, config, logging for services, and pure domain helpers.
 - `web/` serves the browser UI, JSON API, library/collection persistence, and print views.
-- Browser UI loads shared domain logic from `web/public/moozhak-domain.js` (kept in sync with `core/domain/library.js`).
+- Browser UI loads shared domain logic from `web/public/moozhak-domain.js` (kept in sync with `core/domain/library.js`) and small UI preference helpers from `web/public/moozhak-ui-prefs.js` (source [web/lib/client/ui-prefs.js](../../web/lib/client/ui-prefs.js), same sync step).
 
 ### Web layout (concrete paths)
 
@@ -16,6 +16,12 @@
 | Persistence & logging | [web/lib/](../../web/lib/) (e.g. library/collection stores, SQLite under `web/lib/persistence/`) |
 | Templates | [web/views/](../../web/views/) |
 | Browser | [web/public/](../../web/public/) |
+
+### Navigation and chrome (future)
+
+The UI is **multi-page HTML** today: each navigation loads a full document, so the navbar is re-created every time. An inline script at the top of `<head>` ([web/views/partials/theme-head-boot.ejs](../../web/views/partials/theme-head-boot.ejs)) sets `data-theme` from `localStorage` before paint so DaisyUI colors match [web/public/app.js](../../web/public/app.js) and avoid a navbar/title flash when the stored theme differs from the server default. Another inline script after the header view toggle ([web/views/partials/view-toggle-boot.ejs](../../web/views/partials/view-toggle-boot.ejs)) applies `btn-active` from `localStorage`, aligned with [web/lib/client/ui-prefs.js](../../web/lib/client/ui-prefs.js). Stylesheets use `rel=preload`, `blocking="render"` where supported, and **`Cache-Control` / `maxAge`** on `express.static` in production so repeat visits avoid redundant CSS fetches.
+
+If the app grows more interactive (many client-driven transitions, heavier shell state), consider **Option B**: a **persistent layout** via **Turbo Drive**, **HTMX `hx-boost`**, or similar—swap only `main` (or a frame) so the header DOM and styles are not torn down on every in-app link. That will require a deliberate story for **Alpine** (e.g. scope Alpine to the swapped region only, or keep the nav free of Alpine).
 
 Runtime data defaults to the repo `data/` directory; override with `MOOZAK_DATA_DIR` in `.mzkconfig` or as an environment variable (env wins). Canonical store is SQLite (`moozhak.db` under that directory); JSON export/import remains for backups.
 

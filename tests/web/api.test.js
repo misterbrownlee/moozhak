@@ -266,3 +266,21 @@ describe('GET /api/settings and PUT /api/settings', () => {
     expect(res.body.getSongBpmKeySet).toBe(true);
   });
 });
+
+describe('Static app icons', () => {
+  it('serves SVG favicon', async () => {
+    const res = await request(app).get('/favicon.svg').expect(200);
+    expect(res.headers['content-type']).toMatch(/svg/);
+    const raw = Buffer.isBuffer(res.body)
+      ? res.body.toString('utf8')
+      : res.text;
+    expect(raw).toContain('#404040');
+  });
+
+  it('serves apple touch PNG', async () => {
+    const res = await request(app).get('/vinyl180.png').expect(200);
+    expect(res.headers['content-type']).toMatch(/png/);
+    expect(Buffer.isBuffer(res.body)).toBe(true);
+    expect(res.body.length).toBeGreaterThan(100);
+  });
+});

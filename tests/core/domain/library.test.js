@@ -7,6 +7,12 @@ import {
   mergeBpmIntoSides,
   normalizeLibraryItem,
   parseBoxSetAlbums,
+  parseTrackBpm,
+  numericBpmOrNull,
+  bpmSortComparable,
+  normalizeStoredBpmValue,
+  normalizeLibraryItemTrackBpms,
+  normalizeSetlistTrackBpms,
 } from '../../../core/domain/library.js';
 
 describe('core/domain/library', () => {
@@ -125,6 +131,96 @@ describe('core/domain/library', () => {
         { title: 'a' },
         { title: 'b' },
       ]);
+    });
+  });
+
+  describe('parseTrackBpm', () => {
+    it('treats empty as null', () => {
+      expect(parseTrackBpm(null)).toEqual({ valid: true, value: null });
+      expect(parseTrackBpm(undefined)).toEqual({ valid: true, value: null });
+      expect(parseTrackBpm('')).toEqual({ valid: true, value: null });
+      expect(parseTrackBpm('  ')).toEqual({ valid: true, value: null });
+    });
+    it('accepts finite numbers and numeric strings', () => {
+      expect(parseTrackBpm(128)).toEqual({ valid: true, value: 128 });
+      expect(parseTrackBpm('120')).toEqual({ valid: true, value: 120 });
+      expect(parseTrackBpm('  99.5  ')).toEqual({ valid: true, value: 99.5 });
+    });
+    it('rejects non-numeric text and non-finite numbers', () => {
+      expect(parseTrackBpm('abc')).toEqual({ valid: false });
+      expect(parseTrackBpm('12a')).toEqual({ valid: false });
+      expect(parseTrackBpm(Number.NaN)).toEqual({ valid: false });
+      expect(parseTrackBpm(Number.POSITIVE_INFINITY)).toEqual({ valid: false });
+    });
+  });
+
+  describe('numericBpmOrNull', () => {
+    it('coerces valid numeric strings and numbers', () => {
+      expect(numericBpmOrNull('128')).toBe(128);
+      expect(numericBpmOrNull(99.5)).toBe(99.5);
+    });
+    it('returns null for empty and invalid', () => {
+      expect(numericBpmOrNull(null)).toBeNull();
+      expect(numericBpmOrNull('')).toBeNull();
+      expect(numericBpmOrNull('x')).toBeNull();
+    });
+  });
+
+  describe('bpmSortComparable', () => {
+    it('uses numeric value when present', () => {
+      expect(bpmSortComparable('120', true)).toBe(120);
+      expect(bpmSortComparable(120, false)).toBe(120);
+    });
+    it('sends missing to end for asc and desc', () => {
+      expect(bpmSortComparable(null, true)).toBe(Infinity);
+      expect(bpmSortComparable('bad', true)).toBe(Infinity);
+      expect(bpmSortComparable(null, false)).toBe(-Infinity);
+    });
+  });
+
+  describe('normalizeStoredBpmValue', () => {
+    it('returns number or null', () => {
+      expect(normalizeStoredBpmValue('118')).toBe(118);
+      expect(normalizeStoredBpmValue(122)).toBe(122);
+      expect(normalizeStoredBpmValue('')).toBeNull();
+      expect(normalizeStoredBpmValue('nope')).toBeNull();
+    });
+  });
+
+  describe('normalizeLibraryItemTrackBpms', () => {
+    it('coerces string BPM and clears invalid', () => {
+      const item = {
+        sides: [
+          {
+            tracks: [
+              { bpm: '120', title: 'a' },
+              { bpm: 130, title: 'b' },
+              { bpm: 'x', title: 'c' },
+            ],
+          },
+        ],
+      };
+      expect(normalizeLibraryItemTrackBpms(item)).toBe(true);
+      expect(item.sides[0].tracks[0].bpm).toBe(120);
+      expect(item.sides[0].tracks[1].bpm).toBe(130);
+      expect(item.sides[0].tracks[2].bpm).toBeNull();
+    });
+    it('returns false when nothing changes', () => {
+      const item = {
+        sides: [{ tracks: [{ bpm: 100 }] }],
+      };
+      expect(normalizeLibraryItemTrackBpms(item)).toBe(false);
+    });
+  });
+
+  describe('normalizeSetlistTrackBpms', () => {
+    it('normalizes tracks array', () => {
+      const doc = {
+        tracks: [{ bpm: '99' }, { bpm: null }],
+      };
+      expect(normalizeSetlistTrackBpms(doc)).toBe(true);
+      expect(doc.tracks[0].bpm).toBe(99);
+      expect(doc.tracks[1].bpm).toBeNull();
     });
   });
 
