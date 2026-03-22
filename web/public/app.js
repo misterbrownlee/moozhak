@@ -55,10 +55,12 @@ function vinylApp() {
       bpmAverage: null,
     },
 
-    // Add to set modal
-    addToSetContext: null,
-    addToSetPickerList: [],
-    addToSetNewName: '',
+    // Unified set dialog (library track)
+    trackSetDialogContext: null,
+    trackSetDialogAllSets: [],
+    trackSetDialogMemberSets: [],
+    trackSetDialogSelectedSetId: '',
+    trackSetDialogLoading: false,
 
     // ============================================
     // Debug Logging
@@ -371,6 +373,32 @@ function vinylApp() {
       return this._trackMembershipSet.has(this.membershipKeyForRow(row));
     },
 
+    isDetailsTrackInSet(track) {
+      if (!this.detailsData?.libraryItemId) return false;
+      return this.isTrackRowInSet({
+        libraryItemId: this.detailsData.libraryItemId,
+        position: track.position,
+        trackTitle: track.title,
+      });
+    },
+
+    openTrackSetDialogFromRow(row) {
+      this.openTrackSetDialog({
+        libraryItemId: row.libraryItemId,
+        trackPosition: row.position,
+        trackTitle: row.trackTitle,
+      });
+    },
+
+    openTrackSetDialogFromDetails(track) {
+      if (!this.detailsData?.libraryItemId) return;
+      this.openTrackSetDialog({
+        libraryItemId: this.detailsData.libraryItemId,
+        trackPosition: track.position,
+        trackTitle: track.title,
+      });
+    },
+
     toggleLibraryTrackSort(key) {
       if (this.libraryTrackSortKey === key) {
         this.libraryTrackSortDir =
@@ -428,49 +456,76 @@ function vinylApp() {
       }));
     },
 
-    async openAddToSet(ctx) {
-      this.addToSetContext = ctx;
-      this.addToSetNewName = '';
-      this.loading = true;
+    membershipKeyFromApiRow(t) {
+      const pos =
+        t.trackPosition !== undefined && t.trackPosition !== null
+          ? t.trackPosition
+          : t.position;
+      return `${String(t.libraryItemId)}::${String(pos ?? '').trim()}`;
+    },
+
+    trackSetDialogMembershipKey() {
+      const c = this.trackSetDialogContext;
+      if (!c) return '';
+      return `${String(c.libraryItemId)}::${String(c.trackPosition ?? '').trim()}`;
+    },
+
+    trackSetDialogPickerSets() {
+      const all = this.trackSetDialogAllSets || [];
+      const memberIds = new Set(
+        (this.trackSetDialogMemberSets || []).map((s) => s.id),
+      );
+      return all.filter((s) => s.id && !memberIds.has(s.id));
+    },
+
+    async openTrackSetDialog(ctx) {
+      this.trackSetDialogContext = {
+        libraryItemId: ctx.libraryItemId,
+        trackPosition: ctx.trackPosition,
+        trackTitle: ctx.trackTitle,
+      };
+      this.trackSetDialogSelectedSetId = '';
+      this.trackSetDialogAllSets = [];
+      this.trackSetDialogMemberSets = [];
+      this.trackSetDialogLoading = true;
+      this.$refs.manageTrackSetModal.showModal();
+      const params = new URLSearchParams({
+        libraryItemId: String(ctx.libraryItemId),
+        trackPosition: String(ctx.trackPosition ?? ''),
+      });
       try {
-        const r = await fetch('/api/setlists');
-        const d = await r.json();
-        this.addToSetPickerList = d.setlists || [];
-      } catch {
-        this.addToSetPickerList = [];
-        this.showToast('Could not load sets', 'error');
+        const [rList, rBy] = await Promise.all([
+          fetch('/api/setlists'),
+          fetch(`/api/setlists/by-track?${params}`),
+        ]);
+        const dList = await rList.json();
+        const dBy = await rBy.json();
+        if (!rList.ok) throw new Error(dList.error || 'Could not load sets');
+        if (!rBy.ok) throw new Error(dBy.error || 'Could not load membership');
+        this.trackSetDialogAllSets = dList.setlists || [];
+        this.trackSetDialogMemberSets = dBy.sets || [];
+      } catch (e) {
+        this.showToast(e.message || 'Could not load', 'error');
+        this.trackSetDialogAllSets = [];
+        this.trackSetDialogMemberSets = [];
       } finally {
-        this.loading = false;
+        this.trackSetDialogLoading = false;
       }
-      this.$refs.addToSetModal.showModal();
     },
 
-    openAddToSetFromRow(row) {
-      this.openAddToSet({
-        libraryItemId: row.libraryItemId,
-        trackPosition: row.position,
-        trackTitle: row.trackTitle,
-      });
+    closeTrackSetDialog() {
+      this.trackSetDialogContext = null;
+      this.trackSetDialogAllSets = [];
+      this.trackSetDialogMemberSets = [];
+      this.trackSetDialogSelectedSetId = '';
+      this.trackSetDialogLoading = false;
+      this.$refs.manageTrackSetModal?.close();
     },
 
-    openAddToSetFromDetails(track) {
-      if (!this.detailsData?.libraryItemId) return;
-      this.openAddToSet({
-        libraryItemId: this.detailsData.libraryItemId,
-        trackPosition: track.position,
-        trackTitle: track.title,
-      });
-    },
-
-    closeAddToSetModal() {
-      this.addToSetContext = null;
-      this.addToSetPickerList = [];
-      this.$refs.addToSetModal.close();
-    },
-
-    async addTrackToExistingSet(setId) {
-      const ctx = this.addToSetContext;
-      if (!ctx) return;
+    async addTrackToSelectedSet() {
+      const ctx = this.trackSetDialogContext;
+      const setId = this.trackSetDialogSelectedSetId;
+      if (!ctx || !setId) return;
       this.loading = true;
       try {
         const gr = await fetch(`/api/setlists/${setId}`);
@@ -494,7 +549,7 @@ function vinylApp() {
         const out = await pr.json();
         if (!pr.ok) throw new Error(out.error || 'Save failed');
         this.showToast('Added to set', 'success');
-        this.closeAddToSetModal();
+        this.closeTrackSetDialog();
         this.$refs.detailsModal?.close();
         window.location.reload();
       } catch (e) {
@@ -504,17 +559,16 @@ function vinylApp() {
       }
     },
 
-    async addTrackToNewSet() {
-      const ctx = this.addToSetContext;
+    async createNewSetWithTrack() {
+      const ctx = this.trackSetDialogContext;
       if (!ctx) return;
-      const name = (this.addToSetNewName || '').trim() || 'New set';
       this.loading = true;
       try {
         const pr = await fetch('/api/setlists', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            name,
+            name: 'New set',
             notes: '',
             tracks: [
               {
@@ -527,9 +581,81 @@ function vinylApp() {
         const out = await pr.json();
         if (!pr.ok) throw new Error(out.error || 'Create failed');
         this.showToast('Set created', 'success');
-        this.closeAddToSetModal();
+        this.closeTrackSetDialog();
         this.$refs.detailsModal?.close();
         window.location.href = `/sets/${out.id}`;
+      } catch (e) {
+        this.showToast(e.message || 'Error', 'error');
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async removeTrackFromMemberSet(setId) {
+      const ctx = this.trackSetDialogContext;
+      if (!ctx) return;
+      const want = this.trackSetDialogMembershipKey();
+      this.loading = true;
+      try {
+        const gr = await fetch(`/api/setlists/${setId}`);
+        const s = await gr.json();
+        if (!gr.ok) throw new Error(s.error || 'Set not found');
+        const next = this.tracksPayloadForApi(s.tracks).filter(
+          (t) => this.membershipKeyFromApiRow(t) !== want,
+        );
+        const pr = await fetch(`/api/setlists/${setId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: s.name,
+            notes: s.notes ?? '',
+            tracks: next,
+          }),
+        });
+        const out = await pr.json();
+        if (!pr.ok) throw new Error(out.error || 'Save failed');
+        this.showToast('Removed from set', 'success');
+        this.closeTrackSetDialog();
+        this.$refs.detailsModal?.close();
+        window.location.reload();
+      } catch (e) {
+        this.showToast(e.message || 'Error', 'error');
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async duplicateTrackInMemberSet(setId) {
+      const ctx = this.trackSetDialogContext;
+      if (!ctx) return;
+      this.loading = true;
+      try {
+        const gr = await fetch(`/api/setlists/${setId}`);
+        const s = await gr.json();
+        if (!gr.ok) throw new Error(s.error || 'Set not found');
+        const payload = this.tracksPayloadForApi(s.tracks);
+        const next = [
+          ...payload,
+          {
+            libraryItemId: ctx.libraryItemId,
+            trackPosition: ctx.trackPosition,
+          },
+        ];
+        const pr = await fetch(`/api/setlists/${setId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: s.name,
+            notes: s.notes ?? '',
+            tracks: next,
+          }),
+        });
+        const out = await pr.json();
+        if (!pr.ok) throw new Error(out.error || 'Save failed');
+        this.showToast('Duplicated in set', 'success');
+        this.closeTrackSetDialog();
+        this.$refs.detailsModal?.close();
+        window.location.reload();
       } catch (e) {
         this.showToast(e.message || 'Error', 'error');
       } finally {

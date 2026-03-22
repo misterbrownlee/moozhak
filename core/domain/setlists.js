@@ -67,6 +67,47 @@ export function findSetsReferencingLibraryItemId(sets, libraryItemId) {
 }
 
 /**
+ * Sets that include this exact library track (libraryItemId + position).
+ * @param {SetDocument[]} sets
+ * @param {string} libraryItemId
+ * @param {string|undefined|null} trackPosition
+ * @returns {{ id: string, name: string, thumbUrls: string[] }[]}
+ */
+export function findSetsContainingTrack(sets, libraryItemId, trackPosition) {
+  const wantKey = trackMembershipKey(libraryItemId, trackPosition);
+  const out = [];
+  const seen = new Set();
+  if (!sets?.length) return out;
+  for (const s of sets) {
+    if (!s?.id || seen.has(s.id)) continue;
+    const tracks = s.tracks || [];
+    for (const t of tracks) {
+      const pos = t.trackPosition ?? t.position;
+      const key = trackMembershipKey(t.libraryItemId, pos);
+      if (key === wantKey) {
+        seen.add(s.id);
+        const persisted = s.thumbUrls;
+        const thumbUrls =
+          Array.isArray(persisted) && persisted.length === 4
+            ? persisted
+            : pickSetThumbUrls(tracks);
+        out.push({
+          id: s.id,
+          name:
+            typeof s.name === 'string' && s.name.trim()
+              ? s.name.trim()
+              : 'Untitled set',
+          thumbUrls,
+        });
+        break;
+      }
+    }
+  }
+  out.sort((a, b) => a.name.localeCompare(b.name));
+  return out;
+}
+
+/**
  * Ordered unique album thumb URLs from track snapshots (first occurrence per libraryItemId).
  * @param {Array<{ libraryItemId?: string, thumb?: string, cover?: string }>} tracks
  * @returns {string[]}

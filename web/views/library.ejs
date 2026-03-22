@@ -39,8 +39,7 @@
             <th><button type="button" class="link link-hover font-semibold" @click="toggleLibraryTrackSort('albumTitle')">Album</button></th>
             <th class="text-right"><button type="button" class="link link-hover font-semibold" @click="toggleLibraryTrackSort('bpm')">BPM</button></th>
             <th class="text-center"><button type="button" class="link link-hover font-semibold" @click="toggleLibraryTrackSort('key')">Key</button></th>
-            <th>In set</th>
-            <th></th>
+            <th class="whitespace-nowrap">Set</th>
           </tr>
         </thead>
         <tbody>
@@ -52,11 +51,13 @@
               <td class="text-right text-base-content/70" x-text="row.bpm != null ? row.bpm : '—'"></td>
               <td class="text-center text-base-content/70" x-text="row.key || '—'"></td>
               <td>
-                <span class="badge badge-success badge-sm" x-show="isTrackRowInSet(row)">In set</span>
-                <span class="text-base-content/40" x-show="!isTrackRowInSet(row)">—</span>
-              </td>
-              <td>
-                <button type="button" class="btn btn-xs btn-primary" @click="openAddToSetFromRow(row)">Add to set</button>
+                <button
+                  type="button"
+                  @click="openTrackSetDialogFromRow(row)"
+                  :class="(isTrackRowInSet(row) ? 'btn btn-xs btn-success' : 'btn btn-xs btn-primary') + ' whitespace-nowrap min-w-[6.75rem] inline-flex justify-center'"
+                  :title="isTrackRowInSet(row) ? 'Manage sets for this track' : 'Add this track to a set'"
+                  x-text="isTrackRowInSet(row) ? 'In set' : 'Add to set'"
+                ></button>
               </td>
             </tr>
           </template>

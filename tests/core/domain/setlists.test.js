@@ -2,6 +2,7 @@ import {
   buildTrackSetMembershipIndex,
   calculateSetStats,
   denormalizeTrackFromLibraryItem,
+  findSetsContainingTrack,
   findSetsReferencingLibraryItemId,
   flattenLibraryToTrackRows,
   pickSetThumbUrls,
@@ -59,6 +60,68 @@ describe('setlists domain', () => {
         { id: 's1', name: 'Warm-up' },
         { id: 's3', name: 'Untitled set' },
       ]);
+    });
+  });
+
+  describe('findSetsContainingTrack', () => {
+    it('returns sets that contain the exact track key', () => {
+      const sets = [
+        {
+          id: 's1',
+          name: 'Zed',
+          tracks: [{ libraryItemId: 'lib_x', trackPosition: 'A1' }],
+        },
+        {
+          id: 's2',
+          name: 'Alpha',
+          tracks: [{ libraryItemId: 'lib_x', trackPosition: 'A2' }],
+        },
+      ];
+      expect(findSetsContainingTrack(sets, 'lib_x', 'A2')).toEqual([
+        {
+          id: 's2',
+          name: 'Alpha',
+          thumbUrls: [],
+        },
+      ]);
+    });
+
+    it('returns multiple sets when the same track appears in each', () => {
+      const sets = [
+        {
+          id: 'a',
+          name: 'B',
+          tracks: [{ libraryItemId: 'lid', trackPosition: 'B1' }],
+        },
+        {
+          id: 'b',
+          name: 'A',
+          tracks: [{ libraryItemId: 'lid', position: 'B1' }],
+        },
+      ];
+      const got = findSetsContainingTrack(sets, 'lid', 'B1');
+      expect(got.map((x) => x.id)).toEqual(['b', 'a']);
+      expect(got.every((x) => x.name && x.id)).toBe(true);
+    });
+
+    it('returns [] when no set contains that position', () => {
+      const sets = [
+        { id: 's1', name: 'S', tracks: [{ libraryItemId: 'lib_x', trackPosition: 'A1' }] },
+      ];
+      expect(findSetsContainingTrack(sets, 'lib_x', 'A2')).toEqual([]);
+    });
+
+    it('uses persisted thumbUrls when length is 4', () => {
+      const urls = ['http://1', 'http://2', 'http://3', 'http://4'];
+      const sets = [
+        {
+          id: 's1',
+          name: 'S',
+          thumbUrls: urls,
+          tracks: [{ libraryItemId: 'x', trackPosition: 'A1', thumb: 'http://other' }],
+        },
+      ];
+      expect(findSetsContainingTrack(sets, 'x', 'A1')[0].thumbUrls).toEqual(urls);
     });
   });
 

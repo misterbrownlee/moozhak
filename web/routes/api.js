@@ -9,6 +9,7 @@ import {
 import {
   calculateSetStats,
   denormalizeTrackFromLibraryItem,
+  findSetsContainingTrack,
   findSetsReferencingLibraryItemId,
   pickSetThumbUrls,
   validateSetNotes,
@@ -655,6 +656,36 @@ router.get(
   asyncHandler(async (_req, res) => {
     const list = loadSetlists().map((doc) => enrichSetlist(doc));
     res.json({ setlists: list });
+  }),
+);
+
+router.get(
+  '/setlists/by-track',
+  asyncHandler(async (req, res) => {
+    const libraryItemId = req.query.libraryItemId;
+    const qtp = req.query.trackPosition;
+    const qp = req.query.position;
+    const trackPosition =
+      qtp != null && String(qtp).trim() !== ''
+        ? qtp
+        : qp != null && String(qp).trim() !== ''
+          ? qp
+          : null;
+    if (
+      libraryItemId == null ||
+      String(libraryItemId).trim() === '' ||
+      trackPosition == null
+    ) {
+      return res.status(400).json({
+        error: 'libraryItemId and trackPosition (or position) are required',
+      });
+    }
+    const sets = findSetsContainingTrack(
+      loadSetlists(),
+      String(libraryItemId),
+      trackPosition,
+    );
+    res.json({ sets });
   }),
 );
 

@@ -267,6 +267,59 @@ describe('GET /api/settings and PUT /api/settings', () => {
   });
 });
 
+describe('GET /api/setlists/by-track', () => {
+  it('returns 400 when libraryItemId or track position missing', async () => {
+    await request(app).get('/api/setlists/by-track').expect(400);
+    await request(app)
+      .get('/api/setlists/by-track?libraryItemId=lib_x')
+      .expect(400);
+    await request(app)
+      .get('/api/setlists/by-track?trackPosition=A1')
+      .expect(400);
+  });
+
+  it('returns sets that contain the track; position alias works', async () => {
+    const create = await request(app)
+      .post('/api/library')
+      .send({
+        discogsId: 9001,
+        title: 'Album For Set',
+        artist: 'Band',
+        tracklist: [{ position: 'A1', title: 'One' }],
+      })
+      .expect(201);
+
+    const libId = create.body.id;
+
+    const setRes = await request(app)
+      .post('/api/setlists')
+      .send({
+        name: 'Evening',
+        notes: '',
+        tracks: [{ libraryItemId: libId, trackPosition: 'A1' }],
+      })
+      .expect(201);
+
+    const byTrack = await request(app)
+      .get(
+        `/api/setlists/by-track?libraryItemId=${encodeURIComponent(libId)}&trackPosition=A1`,
+      )
+      .expect(200);
+
+    expect(byTrack.body.sets).toHaveLength(1);
+    expect(byTrack.body.sets[0].id).toBe(setRes.body.id);
+    expect(byTrack.body.sets[0].name).toBe('Evening');
+    expect(Array.isArray(byTrack.body.sets[0].thumbUrls)).toBe(true);
+
+    const byAlias = await request(app)
+      .get(
+        `/api/setlists/by-track?libraryItemId=${encodeURIComponent(libId)}&position=A1`,
+      )
+      .expect(200);
+    expect(byAlias.body.sets).toHaveLength(1);
+  });
+});
+
 describe('Static app icons', () => {
   it('serves SVG favicon', async () => {
     const res = await request(app).get('/favicon.svg').expect(200);

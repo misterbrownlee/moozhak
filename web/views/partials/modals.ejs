@@ -45,7 +45,7 @@
                         <th class="w-16 text-center">Key</th>
                         <th class="w-16 text-center">Sig</th>
                         <th class="w-20 text-right">Duration</th>
-                        <th class="w-28" x-show="detailsData.libraryItemId">Set</th>
+                        <th class="whitespace-nowrap" x-show="detailsData.libraryItemId">Set</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -58,7 +58,13 @@
                           <td class="w-16 text-center text-base-content/60" x-text="track.timeSignature || '--'"></td>
                           <td class="w-20 text-right text-base-content/60" x-text="track.duration || ''"></td>
                           <td x-show="detailsData.libraryItemId">
-                            <button type="button" class="btn btn-xs btn-primary" @click.stop="openAddToSetFromDetails(track)">Add to set</button>
+                            <button
+                              type="button"
+                              @click.stop="openTrackSetDialogFromDetails(track)"
+                              :class="(isDetailsTrackInSet(track) ? 'btn btn-xs btn-success' : 'btn btn-xs btn-primary') + ' whitespace-nowrap min-w-[6.75rem] inline-flex justify-center'"
+                              :title="isDetailsTrackInSet(track) ? 'Manage sets for this track' : 'Add this track to a set'"
+                              x-text="isDetailsTrackInSet(track) ? 'In set' : 'Add to set'"
+                            ></button>
                           </td>
                         </tr>
                       </template>
@@ -77,27 +83,60 @@
   </form>
 </dialog>
 
-<!-- Add to set -->
-<dialog id="add-to-set-modal" class="modal" x-ref="addToSetModal">
-  <div class="modal-box max-w-md">
-    <h3 class="font-bold text-lg">Add to set</h3>
-    <p class="text-sm text-base-content/60 py-2" x-show="addToSetContext" x-text="addToSetContext ? (addToSetContext.trackTitle || 'Track') + ' — pick a set or create one.' : ''"></p>
-    <div class="form-control w-full gap-2 max-h-60 overflow-y-auto">
-      <template x-for="s in addToSetPickerList" :key="s.id">
-        <button type="button" class="btn btn-sm btn-outline justify-start" @click="addTrackToExistingSet(s.id)" x-text="s.name || 'Untitled set'"></button>
-      </template>
-    </div>
-    <div class="divider">or</div>
-    <div class="flex gap-2 flex-wrap">
-      <input type="text" class="input input-bordered input-sm flex-1 min-w-[8rem]" placeholder="New set name" x-model="addToSetNewName" />
-      <button type="button" class="btn btn-sm btn-primary" @click="addTrackToNewSet()">Create & add</button>
+<!-- Unified set membership for a library track -->
+<dialog id="track-set-dialog" class="modal" x-ref="manageTrackSetModal">
+  <div class="modal-box max-w-md max-h-[90vh] overflow-y-auto">
+    <button type="button" class="btn btn-sm btn-ghost absolute right-4 top-4" @click="closeTrackSetDialog()" aria-label="Close">✕</button>
+    <h3 class="font-bold text-lg pr-10">Set Actions</h3>
+    <p class="text-sm text-base-content/60 py-1 line-clamp-2" x-show="trackSetDialogContext && trackSetDialogContext.trackTitle">
+      <span class="text-base-content/50">Track: </span><span x-text="trackSetDialogContext.trackTitle"></span>
+    </p>
+    <div x-show="trackSetDialogLoading" class="py-6 text-center text-base-content/60 text-sm">Loading…</div>
+    <div class="space-y-4 mt-2" x-show="!trackSetDialogLoading">
+      <div x-show="trackSetDialogMemberSets.length > 0">
+        <p class="text-xs font-semibold text-base-content/50 uppercase tracking-wide mb-2">Already in these sets</p>
+        <div class="max-h-48 overflow-y-auto space-y-1 border border-base-200 rounded-lg p-2">
+          <template x-for="s in trackSetDialogMemberSets" :key="s.id">
+            <div class="flex flex-wrap items-center gap-2 py-2 border-b border-base-200 last:border-0">
+              <div class="w-11 h-11 flex-shrink-0 rounded-lg overflow-hidden bg-base-300 ring-1 ring-base-300 aspect-square">
+                <div class="grid grid-cols-2 gap-px w-full h-full" x-show="s.thumbUrls && s.thumbUrls.length === 4">
+                  <template x-for="(u, ti) in s.thumbUrls" :key="ti">
+                    <img :src="u" alt="" class="w-full h-full object-cover min-h-0" loading="lazy" />
+                  </template>
+                </div>
+                <div class="w-full h-full flex items-center justify-center text-lg" x-show="!s.thumbUrls || s.thumbUrls.length !== 4">🎵</div>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="font-medium text-sm line-clamp-2" x-text="s.name"></p>
+              </div>
+              <a :href="'/sets/' + s.id" class="link link-primary text-xs flex-shrink-0 whitespace-nowrap">Edit set</a>
+              <button type="button" class="btn btn-xs btn-ghost text-warning flex-shrink-0" @click="removeTrackFromMemberSet(s.id)" title="Remove this track from this set">Remove</button>
+              <button type="button" class="btn btn-xs btn-outline flex-shrink-0" @click="duplicateTrackInMemberSet(s.id)" title="Add this track again to this set">Duplicate</button>
+            </div>
+          </template>
+        </div>
+      </div>
+      <div>
+        <p class="text-xs font-semibold text-base-content/50 uppercase tracking-wide mb-2">Add to another set</p>
+        <select class="select select-bordered select-sm w-full" x-model="trackSetDialogSelectedSetId">
+          <option value="">Choose a set…</option>
+          <template x-for="s in trackSetDialogPickerSets()" :key="s.id">
+            <option :value="s.id" x-text="s.name || 'Untitled set'"></option>
+          </template>
+        </select>
+        <p class="text-sm text-base-content/50 mt-1" x-show="trackSetDialogPickerSets().length === 0">This track is already in every set.</p>
+        <button type="button" class="btn btn-sm btn-primary w-full mt-2" :disabled="!trackSetDialogSelectedSetId || loading" @click="addTrackToSelectedSet()">Add to set</button>
+      </div>
+      <div>
+        <button type="button" class="link link-primary text-sm" @click="createNewSetWithTrack()" :disabled="loading">Add to new set</button>
+      </div>
     </div>
     <div class="modal-action">
-      <button type="button" class="btn btn-ghost" @click="closeAddToSetModal()">Cancel</button>
+      <button type="button" class="btn btn-ghost" @click="closeTrackSetDialog()">Close</button>
     </div>
   </div>
   <form method="dialog" class="modal-backdrop">
-    <button @click="closeAddToSetModal()">close</button>
+    <button type="button" @click="closeTrackSetDialog()">close</button>
   </form>
 </dialog>
 
