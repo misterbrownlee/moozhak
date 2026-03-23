@@ -316,6 +316,21 @@ function vinylApp() {
             ? M.isCompilationRelease(data)
             : false;
 
+        const masterDiscogsId =
+          data.master_id != null && data.master_id !== ''
+            ? Number(data.master_id)
+            : undefined;
+
+        const inLibrary = this.libraryCache.some((item) => {
+          if (
+            type === 'master' &&
+            typeof M?.libraryItemMatchesMasterId === 'function'
+          ) {
+            return M.libraryItemMatchesMasterId(item, id);
+          }
+          return String(item.discogsId) === String(id);
+        });
+
         this.detailsData = {
           id,
           type,
@@ -327,9 +342,10 @@ function vinylApp() {
           cover: cover,
           tracklist: data.tracklist || [],
           compilation,
-          inLibrary: this.libraryCache.some(
-            (item) => String(item.discogsId) === String(id),
-          ),
+          masterDiscogsId: Number.isFinite(masterDiscogsId)
+            ? masterDiscogsId
+            : undefined,
+          inLibrary,
         };
 
         this.$refs.detailsModal.showModal();
@@ -812,6 +828,9 @@ function vinylApp() {
             cover: this.detailsData.cover,
             tracklist: this.detailsData.tracklist,
             compilation: !!this.detailsData.compilation,
+            ...(this.detailsData.masterDiscogsId != null
+              ? { masterDiscogsId: this.detailsData.masterDiscogsId }
+              : {}),
           }),
         });
 
@@ -821,8 +840,16 @@ function vinylApp() {
           throw new Error(data.error || 'Failed to add to library');
         }
 
-        this.libraryCache.push(data);
-        this.showToast('Added to library!', 'success');
+        if (data.boxSet && Array.isArray(data.items)) {
+          data.items.forEach((item) => this.libraryCache.push(item));
+        } else {
+          this.libraryCache.push(data);
+        }
+        const toastMsg =
+          data.addedFromCollection === true
+            ? 'Added your collection pressing to the library!'
+            : 'Added to library!';
+        this.showToast(toastMsg, 'success');
         this.$refs.detailsModal.close();
         window.location.reload();
       } catch (error) {
@@ -863,21 +890,28 @@ function vinylApp() {
             ? M.isCompilationRelease(data)
             : false;
 
+        /** @type {Record<string, unknown>} */
+        const payload = {
+          discogsId: id,
+          type,
+          title: data.title,
+          artist: artists,
+          year: data.year || '',
+          format: formats,
+          thumb: thumb,
+          cover: cover,
+          tracklist: data.tracklist || [],
+          compilation,
+        };
+        if (type === 'release' && data.master_id != null && data.master_id !== '') {
+          const mid = Number(data.master_id);
+          if (Number.isFinite(mid)) payload.masterDiscogsId = mid;
+        }
+
         const addResponse = await fetch('/api/library', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            discogsId: id,
-            type,
-            title: data.title,
-            artist: artists,
-            year: data.year || '',
-            format: formats,
-            thumb: thumb,
-            cover: cover,
-            tracklist: data.tracklist || [],
-            compilation,
-          }),
+          body: JSON.stringify(payload),
         });
 
         const addData = await addResponse.json();
@@ -886,8 +920,16 @@ function vinylApp() {
           throw new Error(addData.error || 'Failed to add to library');
         }
 
-        this.libraryCache.push(addData);
-        this.showToast('Added to library!', 'success');
+        if (addData.boxSet && Array.isArray(addData.items)) {
+          addData.items.forEach((item) => this.libraryCache.push(item));
+        } else {
+          this.libraryCache.push(addData);
+        }
+        const toastMsg =
+          addData.addedFromCollection === true
+            ? 'Added your collection pressing to the library!'
+            : 'Added to library!';
+        this.showToast(toastMsg, 'success');
         window.location.reload();
       } catch (error) {
         console.error('Quick add error:', error);

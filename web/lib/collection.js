@@ -40,9 +40,13 @@ export function buildCollectionData(username, releases, pagination) {
  */
 export function normalizeCollectionRelease(release) {
   const info = release.basic_information || {};
+  const masterRaw = info.master_id;
+  const masterId =
+    masterRaw != null && masterRaw !== '' ? Number(masterRaw) : undefined;
   return {
     instanceId: release.instance_id,
     discogsId: info.id,
+    masterId: Number.isFinite(masterId) ? masterId : undefined,
     title: info.title || 'Unknown Title',
     artist: info.artists
       ? info.artists.map((a) => a.name).join(', ')

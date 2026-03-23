@@ -116,6 +116,10 @@ export function mergeLibraryItemFromDiscogsRelease(item, release) {
   next.compilation = isCompilationRelease(release);
   next.type = 'release';
   if (release.id != null) next.discogsId = release.id;
+  if (release.master_id != null && release.master_id !== '') {
+    const m = Number(release.master_id);
+    if (Number.isFinite(m)) next.masterDiscogsId = m;
+  }
 
   const remoteList = release.tracklist;
   if (!Array.isArray(remoteList) || remoteList.length === 0) {
@@ -286,6 +290,78 @@ export function parseBoxSetAlbums(tracklist) {
 
 /**
  * @param {Record<string, unknown>} body
+ * @returns {number|undefined}
+ */
+export function resolveMasterDiscogsIdFromBody(body) {
+  if (!body || typeof body !== 'object') return undefined;
+  if (body.masterDiscogsId != null && body.masterDiscogsId !== '') {
+    const n = Number(body.masterDiscogsId);
+    return Number.isFinite(n) ? n : undefined;
+  }
+  if (body.master_id != null && body.master_id !== '') {
+    const n = Number(body.master_id);
+    return Number.isFinite(n) ? n : undefined;
+  }
+  return undefined;
+}
+
+/**
+ * Build POST-shaped library body from a Discogs getRelease JSON (server add path).
+ * @param {Record<string, unknown>} release
+ * @returns {Record<string, unknown>}
+ */
+export function libraryPostBodyFromDiscogsRelease(release) {
+  if (!release || typeof release !== 'object') {
+    throw new Error('release required');
+  }
+  const artists = Array.isArray(release.artists)
+    ? release.artists
+        .map((a) => (a && typeof a.name === 'string' ? a.name : ''))
+        .filter(Boolean)
+        .join(', ')
+    : '';
+  const formats = Array.isArray(release.formats)
+    ? release.formats
+        .map((f) => (f && f.name ? f.name : ''))
+        .filter(Boolean)
+        .join(', ')
+    : '';
+  const images = release.images;
+  const firstImg = Array.isArray(images) && images[0] ? images[0] : null;
+  const cover =
+    (firstImg && typeof firstImg.uri === 'string' && firstImg.uri) ||
+    (typeof release.thumb === 'string' && release.thumb) ||
+    '';
+  const thumb =
+    (firstImg && typeof firstImg.uri150 === 'string' && firstImg.uri150) ||
+    (typeof release.thumb === 'string' && release.thumb) ||
+    cover;
+
+  const masterDiscogsId = resolveMasterDiscogsIdFromBody(
+    /** @type {Record<string, unknown>} */ (release),
+  );
+
+  /** @type {Record<string, unknown>} */
+  const out = {
+    discogsId: release.id,
+    type: 'release',
+    title: release.title || 'Unknown Title',
+    artist: artists || 'Unknown Artist',
+    year: release.year != null ? String(release.year) : '',
+    format: formats,
+    thumb,
+    cover,
+    tracklist: release.tracklist || [],
+    compilation: isCompilationRelease(release),
+  };
+  if (masterDiscogsId != null) {
+    out.masterDiscogsId = masterDiscogsId;
+  }
+  return out;
+}
+
+/**
+ * @param {Record<string, unknown>} body
  * @param {string|null} [boxSetTitle]
  * @returns {Record<string, unknown>}
  */
@@ -302,9 +378,13 @@ export function normalizeLibraryItem(body, boxSetTitle = null) {
     compilation = isCompilationRelease(body);
   }
 
+  const itemType = body.type || 'release';
+  const masterDiscogsId = resolveMasterDiscogsIdFromBody(body);
+
+  /** @type {Record<string, unknown>} */
   const item = {
     discogsId: body.discogsId,
-    type: body.type || 'release',
+    type: itemType,
     title: body.title,
     artist: body.artist || 'Unknown Artist',
     year: body.year || '',
@@ -315,6 +395,10 @@ export function normalizeLibraryItem(body, boxSetTitle = null) {
     notes: body.notes || '',
     compilation,
   };
+
+  if (itemType === 'release' && masterDiscogsId != null) {
+    item.masterDiscogsId = masterDiscogsId;
+  }
 
   if (boxSetTitle) {
     item.boxSet = boxSetTitle;
@@ -341,6 +425,8 @@ export function createBoxSetItems(body) {
       ? body.compilation
       : isCompilationRelease(body);
 
+  const masterDiscogsId = resolveMasterDiscogsIdFromBody(body);
+
   return albums.map((album) => {
     return normalizeLibraryItem(
       {
@@ -354,6 +440,7 @@ export function createBoxSetItems(body) {
         tracklist: album.tracks,
         notes: body.notes || '',
         compilation: boxCompilation,
+        ...(masterDiscogsId != null ? { masterDiscogsId } : {}),
       },
       boxSetTitle,
     );

@@ -22,16 +22,17 @@
 
 <!-- Search Results -->
 <div class="mt-6 grid gap-4">
-  <% if (typeof results !== 'undefined' && results !== null) { %>
-    <% if (results.length === 0) { %>
+  <% if (Array.isArray(searchRows)) { %>
+    <% if (searchRows.length === 0) { %>
       <div class="alert alert-info">
         <span>No results found. Try a different search term.</span>
       </div>
     <% } else { %>
-      <% results.forEach(result => { %>
+      <% searchRows.forEach(row => { %>
         <%- include('partials/search-result-card', { 
-          result, 
-          inLibrary: libraryIds.includes(String(result.id))
+          result: row.result, 
+          inLibrary: row.inLibrary,
+          inDiscogsCollection: row.inDiscogsCollection
         }) %>
       <% }); %>
     <% } %>

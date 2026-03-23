@@ -130,14 +130,13 @@ async function makeRequest(endpoint, params = {}, options = {}) {
  * const results = await searchSong('Rick Astley', 'Never Gonna Give You Up');
  * // Returns: { search: [{ id, title, tempo, artist, ... }] }
  */
-export async function searchSong(artist, title, options = {}) {
+export async function searchBothByLookup(lookup, options = {}) {
   const { limit, verbose = false, apiKey } = options;
 
   if (verbose) {
-    log.debug(`GetSongBPM: Searching for "${artist}" - "${title}"`);
+    log.debug(`GetSongBPM: Searching with lookup "${lookup}"`);
   }
 
-  const lookup = `song:${title} artist:${artist}`;
   const params = { type: 'both', lookup };
 
   if (limit) {
@@ -152,6 +151,17 @@ export async function searchSong(artist, title, options = {}) {
   }
 
   return data;
+}
+
+export async function searchSong(artist, title, options = {}) {
+  const { verbose = false } = options;
+
+  if (verbose) {
+    log.debug(`GetSongBPM: Searching for "${artist}" - "${title}"`);
+  }
+
+  const lookup = `song:${title} artist:${artist}`;
+  return searchBothByLookup(lookup, options);
 }
 
 /**
@@ -267,9 +277,9 @@ export async function getArtist(artistId, verbose = false) {
 /**
  * Find BPM for a track by artist and title
  * Convenience method that searches and returns the best match with BPM
- * @param {string} artist - Artist name
+ * @param {string} artist - Artist name (ranking hint; may be empty when using custom lookup)
  * @param {string} title - Song title
- * @param {boolean|Object} [third=false] - Verbose flag, or `{ verbose?, apiKey? }` for web overrides
+ * @param {boolean|Object} [third=false] - Verbose flag, or `{ verbose?, apiKey?, lookup? }` for web overrides (`lookup` = raw GetSongBPM search string)
  * @returns {Promise<Object>} Result with BPM info or error
  *
  * @example
@@ -282,8 +292,13 @@ export async function getArtist(artistId, verbose = false) {
  */
 export async function findBpm(artist, title, third = false) {
   const opts = typeof third === 'boolean' ? { verbose: third } : third || {};
-  const { verbose = false, apiKey } = opts;
-  const searchResult = await searchSong(artist, title, { verbose, apiKey });
+  const { verbose = false, apiKey, lookup: lookupOpt } = opts;
+  const trimmedLookup =
+    typeof lookupOpt === 'string' ? lookupOpt.trim() : '';
+
+  const searchResult = trimmedLookup
+    ? await searchBothByLookup(trimmedLookup, { verbose, apiKey })
+    : await searchSong(artist, title, { verbose, apiKey });
 
   if (!searchResult || searchResult.error) {
     return {
@@ -303,13 +318,17 @@ export async function findBpm(artist, title, third = false) {
     };
   }
 
-  // Find best match (prefer exact artist match)
-  const artistLower = artist.toLowerCase();
+  const artistTrim = String(artist ?? '').trim();
+  const artistLower = artistTrim.toLowerCase();
+
+  // Prefer artist match when we have a non-empty hint; empty artist would match every row via includes('')
   const bestMatch =
-    songs.find((s) => {
-      const songArtist = s.artist?.name?.toLowerCase() || '';
-      return songArtist === artistLower || songArtist.includes(artistLower);
-    }) || songs[0];
+    artistLower.length > 0
+      ? songs.find((s) => {
+          const songArtist = s.artist?.name?.toLowerCase() || '';
+          return songArtist === artistLower || songArtist.includes(artistLower);
+        }) || songs[0]
+      : songs[0];
 
   const bpm = bestMatch.tempo ? parseInt(bestMatch.tempo, 10) : null;
 

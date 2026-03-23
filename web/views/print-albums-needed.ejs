@@ -1,0 +1,29 @@
+<%# Print list: library albums not in synced Discogs collection %>
+<div class="print:bg-white print:p-0 max-w-3xl mx-auto px-2">
+  <div class="flex flex-wrap justify-between items-center gap-2 mb-6 no-print">
+    <h2 class="text-2xl font-bold">Albums needed</h2>
+    <div class="flex gap-2">
+      <button type="button" onclick="window.print()" class="btn btn-primary btn-sm">Print</button>
+      <a href="/library" class="btn btn-ghost btn-sm">Back to Library</a>
+    </div>
+  </div>
+
+  <% if (!collectionSynced) { %>
+    <div class="alert alert-warning no-print mb-4">
+      <span>Sync your Discogs collection to list library albums that are not in it.</span>
+    </div>
+    <p class="text-base-content/60 text-sm print:text-black">Open the <a href="/collection" class="link no-print">Collection</a> page and update your collection, then return here.</p>
+  <% } else if (needed.length === 0) { %>
+    <p class="text-base-content/70 print:text-black">All library albums appear in your synced Discogs collection.</p>
+  <% } else { %>
+    <p class="text-sm text-base-content/60 mb-4 print:text-black"><%= needed.length %> album<%= needed.length !== 1 ? 's' : '' %> not in your Discogs collection</p>
+    <ul class="list-none space-y-3 print:text-black">
+      <% needed.forEach(function (album) { %>
+        <li class="border-b border-base-300 print:border-gray-400 pb-2">
+          <span class="font-medium"><%= album.title %></span><% if (album.year) { %> <span class="text-base-content/70">(<%= album.year %>)</span><% } %>
+          <span class="text-base-content/80"> — <%= album.artist %></span>
+        </li>
+      <% }); %>
+    </ul>
+  <% } %>
+</div>

@@ -174,6 +174,45 @@ describe('POST /api/library/:id/bpm', () => {
   });
 });
 
+describe('POST /api/bpm/lookup', () => {
+  it('returns 400 when neither lookup nor artist+title', async () => {
+    const res = await withMoozhakCredentials(
+      request(app).post('/api/bpm/lookup').send({}),
+    ).expect(400);
+    expect(res.body.error).toBeDefined();
+  });
+
+  it('accepts lookup alone and returns success when findBpm finds a match', async () => {
+    const { findBpm } = await import('../../core/services/getsongbpm.js');
+    findBpm.mockResolvedValueOnce({
+      found: true,
+      bpm: 99,
+      song: {
+        title: 'X',
+        artist: 'Y',
+        tempo: '99',
+        key: 'Cm',
+        timeSignature: '4/4',
+        openKey: null,
+        album: null,
+        year: null,
+      },
+    });
+
+    const res = await withMoozhakCredentials(
+      request(app).post('/api/bpm/lookup').send({ lookup: 'song:X artist:Y' }),
+    ).expect(200);
+
+    expect(findBpm).toHaveBeenCalledWith(
+      '',
+      '',
+      expect.objectContaining({ lookup: 'song:X artist:Y' }),
+    );
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.bpm).toBe(99);
+  });
+});
+
 describe('Export and import', () => {
   it('GET /api/library/export matches envelope', async () => {
     await request(app)

@@ -38,6 +38,7 @@ jest.unstable_mockModule('../../core/services/rateLimiter.js', () => ({
 
 const {
   searchSong,
+  searchBothByLookup,
   searchByTitle,
   searchArtist,
   getSong,
@@ -477,6 +478,87 @@ describe('GetSongBPM API', () => {
       expect(result.found).toBe(true);
       expect(result.bpm).toBeNull();
       expect(result.song.title).toBe('No Tempo');
+    });
+
+    it('uses custom lookup in search when options.lookup is set', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => mockSearchResult,
+      });
+
+      await findBpm('Rick Astley', 'Never Gonna Give You Up', {
+        lookup: 'song:Custom Title artist:Other',
+      });
+
+      const calledUrl = mockFetch.mock.calls[0][0];
+      expect(new URL(calledUrl).searchParams.get('lookup')).toBe(
+        'song:Custom Title artist:Other',
+      );
+    });
+
+    it('with empty artist uses first search result when using custom lookup', async () => {
+      const multipleResults = {
+        search: [
+          {
+            id: 'first',
+            title: 'T',
+            tempo: '100',
+            artist: { name: 'A' },
+          },
+          {
+            id: 'second',
+            title: 'T',
+            tempo: '120',
+            artist: { name: 'B' },
+          },
+        ],
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => multipleResults,
+      });
+
+      const result = await findBpm('', 'ignored', { lookup: 'song:T' });
+
+      expect(result.found).toBe(true);
+      expect(result.song.id).toBe('first');
+      expect(result.bpm).toBe(100);
+    });
+
+    it('trims whitespace from options.lookup', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => mockSearchResult,
+      });
+
+      await findBpm('A', 'B', { lookup: '  song:Z  ' });
+
+      const calledUrl = mockFetch.mock.calls[0][0];
+      expect(new URL(calledUrl).searchParams.get('lookup')).toBe('song:Z');
+    });
+  });
+
+  describe('searchBothByLookup', () => {
+    it('calls /search/ with type=both and lookup string', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ search: [] }),
+      });
+
+      await searchBothByLookup('song:Hi artist:There');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('type=both'),
+        expect.any(Object),
+      );
+      expect(
+        new URL(mockFetch.mock.calls[0][0]).searchParams.get('lookup'),
+      ).toBe('song:Hi artist:There');
     });
   });
 

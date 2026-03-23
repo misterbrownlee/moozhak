@@ -3,6 +3,7 @@
   Params:
     - result: search result object (id, title, type, year, thumb)
     - inLibrary: boolean - whether item is already in library
+    - inDiscogsCollection: boolean|null — true/false when collection synced; null if unknown
 %>
 <%
   const type = result.type || 'release';
@@ -11,6 +12,7 @@
   const thumb = result.thumb || result.cover_image || '';
   const cover = result.cover_image || thumb;
   const id = result.id;
+  const coll = typeof inDiscogsCollection !== 'undefined' ? inDiscogsCollection : null;
 %>
 <div class="card card-side bg-base-100 shadow-md hover:shadow-lg transition-shadow cursor-pointer" @click="viewDetails('<%= type %>', <%= id %>)">
   <figure class="w-24 h-24 flex-shrink-0 m-4">
@@ -18,8 +20,13 @@
   </figure>
   <div class="card-body py-4">
     <h3 class="card-title text-base"><%= title %><% if (year) { %> (<%= year %>)<% } %></h3>
-    <p class="text-sm text-base-content/70">
+    <p class="text-sm text-base-content/70 flex flex-wrap gap-1 items-center">
       <%- include('badge', { text: type, variant: 'sm' }) %>
+      <% if (coll === true) { %>
+        <span class="badge badge-sm badge-success">In your Discogs collection</span>
+      <% } else if (coll === false) { %>
+        <span class="badge badge-sm badge-warning badge-outline">Not in Discogs collection</span>
+      <% } %>
     </p>
     <div class="card-actions justify-end mt-2" @click.stop>
       <% if (inLibrary) { %>

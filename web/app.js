@@ -3,12 +3,22 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
 import {
+  buildCollectionIndex,
+  libraryItemInCollection,
+  libraryItemMatchesMasterId,
+  pickCollectionReleaseForMaster,
+} from '../core/domain/discogsCollectionIndex.js';
+import {
   buildTrackSetMembershipIndex,
   calculateSetStats,
   flattenLibraryToTrackRows,
 } from '../core/domain/setlists.js';
 import { searchDiscogs } from '../core/services/discogs.js';
 import { discogsSetupStatusFromDb } from './lib/appSettings.js';
+import {
+  getCollectionReleases,
+  hasCollection,
+} from './lib/collection.js';
 import { getDiscogsContextForSsr } from './lib/discogsRuntime.js';
 import { getLibraryItem, loadLibrary } from './lib/library.js';
 import { getSetlist, loadSetlists } from './lib/setlists.js';
@@ -90,11 +100,6 @@ export function createApp() {
   // Page Route Handlers
   // ============================================
 
-  function getLibraryDiscogsIds() {
-    const library = loadLibrary();
-    return library.map((item) => String(item.discogsId));
-  }
-
   async function performSearch(query) {
     if (!query) return null;
 
@@ -115,13 +120,30 @@ export function createApp() {
   async function handleSearchPage(req, res) {
     const { q } = req.query;
     const results = await performSearch(q);
-    const libraryIds = getLibraryDiscogsIds();
+    const library = loadLibrary();
+    const index = hasCollection()
+      ? buildCollectionIndex(getCollectionReleases())
+      : null;
+
+    let searchRows = null;
+    if (Array.isArray(results)) {
+      searchRows = results.map((result) => ({
+        result,
+        inLibrary: library.some((item) =>
+          libraryItemMatchesMasterId(item, result.id),
+        ),
+        inDiscogsCollection:
+          index != null
+            ? pickCollectionReleaseForMaster(index, result.id) != null
+            : null,
+      }));
+    }
 
     res.render('index', {
       activeView: 'search',
       query: q || '',
       results,
-      libraryIds,
+      searchRows,
       ...discogsSetupStatusFromDb(),
     });
   }
@@ -131,11 +153,42 @@ export function createApp() {
     const trackRows = flattenLibraryToTrackRows(items);
     const membership = buildTrackSetMembershipIndex(loadSetlists());
     const membershipKeys = [...membership].map((k) => k);
+    const collectionSynced = hasCollection();
+    const collIndex = collectionSynced
+      ? buildCollectionIndex(getCollectionReleases())
+      : null;
+    const itemsView = items.map((item) => ({
+      ...item,
+      inDiscogsCollection: collIndex
+        ? libraryItemInCollection(item, collIndex)
+        : null,
+    }));
     res.render('library', {
       activeView: 'library',
-      items,
+      items: itemsView,
+      collectionSynced,
       trackRows,
       membershipKeys,
+      ...discogsSetupStatusFromDb(),
+    });
+  }
+
+  function handleLibraryPrintNeededPage(_req, res) {
+    const items = loadLibrary();
+    const collectionSynced = hasCollection();
+    const collIndex = collectionSynced
+      ? buildCollectionIndex(getCollectionReleases())
+      : null;
+    const needed =
+      collectionSynced && collIndex
+        ? items.filter((item) => !libraryItemInCollection(item, collIndex))
+        : [];
+
+    res.render('print-albums-needed', {
+      title: 'Albums needed',
+      activeView: 'library',
+      needed,
+      collectionSynced,
       ...discogsSetupStatusFromDb(),
     });
   }
@@ -208,6 +261,7 @@ export function createApp() {
   // ============================================
 
   app.get('/', handleSearchPage);
+  app.get('/library/print-needed', handleLibraryPrintNeededPage);
   app.get('/library', handleLibraryPage);
   app.get('/library/:id/edit', handleEditPage);
   app.get('/sets', handleSetsPage);

@@ -6,6 +6,7 @@ import {
   groupTracksBySide,
   isBoxSet,
   isCompilationRelease,
+  libraryPostBodyFromDiscogsRelease,
   mergeBpmIntoSides,
   mergeLibraryItemFromDiscogsRelease,
   normalizeLibraryItem,
@@ -162,6 +163,37 @@ describe('core/domain/library', () => {
       expect(tr.timeSignature).toBe('4/4');
       expect(tr.openKey).toBe('8m');
     });
+
+    it('sets masterDiscogsId from release.master_id', () => {
+      const item = {
+        discogsId: 10,
+        type: 'release',
+        sides: [],
+      };
+      const out = mergeLibraryItemFromDiscogsRelease(item, {
+        id: 10,
+        master_id: 777,
+        tracklist: [],
+      });
+      expect(out.masterDiscogsId).toBe(777);
+    });
+  });
+
+  describe('libraryPostBodyFromDiscogsRelease', () => {
+    it('builds body with masterDiscogsId', () => {
+      const body = libraryPostBodyFromDiscogsRelease({
+        id: 42,
+        master_id: 900,
+        title: 'LP',
+        artists: [{ name: 'A' }],
+        year: 1980,
+        formats: [{ name: 'Vinyl' }],
+        tracklist: [{ position: 'A1', title: 'T' }],
+      });
+      expect(body.type).toBe('release');
+      expect(body.discogsId).toBe(42);
+      expect(body.masterDiscogsId).toBe(900);
+    });
   });
 
   describe('normalizeLibraryItem', () => {
@@ -185,6 +217,35 @@ describe('core/domain/library', () => {
       );
       expect(item.boxSet).toBe('Box');
     });
+    it('sets masterDiscogsId for release from masterDiscogsId or master_id', () => {
+      expect(
+        normalizeLibraryItem({
+          discogsId: 1,
+          type: 'release',
+          title: 'T',
+          tracklist: [],
+          masterDiscogsId: 500,
+        }).masterDiscogsId,
+      ).toBe(500);
+      expect(
+        normalizeLibraryItem({
+          discogsId: 1,
+          type: 'release',
+          title: 'T',
+          tracklist: [],
+          master_id: 501,
+        }).masterDiscogsId,
+      ).toBe(501);
+      expect(
+        normalizeLibraryItem({
+          discogsId: 1,
+          type: 'master',
+          title: 'T',
+          tracklist: [],
+          master_id: 502,
+        }).masterDiscogsId,
+      ).toBeUndefined();
+    });
   });
 
   describe('createBoxSetItems', () => {
@@ -198,6 +259,25 @@ describe('core/domain/library', () => {
       expect(items).toHaveLength(1);
       expect(items[0].title).toBe('Plain');
     });
+    it('propagates masterDiscogsId to each album item', () => {
+      const body = {
+        discogsId: 9,
+        title: 'Box',
+        artist: 'A',
+        format: 'Vinyl Box Set',
+        masterDiscogsId: 600,
+        tracklist: [
+          { type_: 'heading', title: 'Vol 1' },
+          { type_: 'track', position: 'A1', title: 'One' },
+        ],
+      };
+      const items = createBoxSetItems(body);
+      expect(items.length).toBeGreaterThanOrEqual(1);
+      for (const it of items) {
+        expect(it.masterDiscogsId).toBe(600);
+      }
+    });
+
     it('creates one item per parsed album', () => {
       const body = {
         discogsId: 9,

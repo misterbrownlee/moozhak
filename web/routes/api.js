@@ -1,8 +1,13 @@
 import express from 'express';
 import {
+  buildCollectionIndex,
+  pickCollectionReleaseForMaster,
+} from '../../core/domain/discogsCollectionIndex.js';
+import {
   createBoxSetItems,
   extractTracksFromSides,
   isBoxSet,
+  libraryPostBodyFromDiscogsRelease,
   mergeBpmIntoSides,
   mergeLibraryItemFromDiscogsRelease,
   normalizeLibraryItem,
@@ -401,15 +406,34 @@ router.post(
 router.post(
   '/library',
   asyncHandler(async (req, res) => {
-    const validation = validateLibraryItem(req.body);
+    let body = req.body;
+    let addedFromCollection = false;
+
+    if (body?.type === 'master' && hasCollection()) {
+      const index = buildCollectionIndex(getCollectionReleases());
+      const releaseId = pickCollectionReleaseForMaster(index, body.discogsId);
+      if (releaseId != null) {
+        const { db, isAuthenticated } = req.discogs;
+        const release = await getRelease(db, releaseId, { isAuthenticated });
+        if (!release) {
+          return res.status(502).json({
+            error: 'Could not fetch collection release from Discogs',
+          });
+        }
+        body = libraryPostBodyFromDiscogsRelease(release);
+        addedFromCollection = true;
+      }
+    }
+
+    const validation = validateLibraryItem(body);
 
     if (!validation.valid) {
       return res.status(400).json({ error: validation.error });
     }
 
     // Check if this is a box set with multiple albums
-    if (isBoxSet(req.body.format)) {
-      const items = createBoxSetItems(req.body);
+    if (isBoxSet(body.format)) {
+      const items = createBoxSetItems(body);
 
       // Add all albums from the box set
       const addedItems = items.map((item) => addToLibrary(item));
@@ -418,12 +442,15 @@ router.post(
         boxSet: true,
         count: addedItems.length,
         items: addedItems,
+        ...(addedFromCollection ? { addedFromCollection: true } : {}),
       });
     } else {
       // Regular single album
-      const normalizedItem = normalizeLibraryItem(req.body);
+      const normalizedItem = normalizeLibraryItem(body);
       const item = addToLibrary(normalizedItem);
-      res.status(201).json(item);
+      res.status(201).json(
+        addedFromCollection ? { ...item, addedFromCollection: true } : item,
+      );
     }
   }),
 );
@@ -574,21 +601,32 @@ router.post(
       });
     }
 
-    const { artist, title } = req.body;
+    const artist =
+      typeof req.body.artist === 'string' ? req.body.artist.trim() : '';
+    const title =
+      typeof req.body.title === 'string' ? req.body.title.trim() : '';
+    const lookupRaw = req.body.lookup;
+    const lookup =
+      typeof lookupRaw === 'string' ? lookupRaw.trim() : '';
 
-    if (!artist || !title) {
-      return res.status(400).json({ error: 'artist and title are required' });
+    if (!lookup && (!artist || !title)) {
+      return res.status(400).json({
+        error:
+          'Provide lookup, or both artist and title (non-empty after trim)',
+      });
     }
 
     // Look up BPM for the track
     const result = await findBpm(artist, title, {
       verbose: false,
       apiKey: bpmKey,
+      ...(lookup ? { lookup } : {}),
     });
 
     logUserAction('bpm_track_lookup', {
-      artist,
-      title,
+      artist: artist || undefined,
+      title: title || undefined,
+      lookup: Boolean(lookup),
       found: result.found,
     });
 

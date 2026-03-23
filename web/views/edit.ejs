@@ -178,75 +178,125 @@
     </button>
   </div>
 
-  <!-- BPM Lookup Modal -->
-  <dialog id="bpm-lookup-modal" class="modal" x-ref="bpmLookupModal">
+  <!-- BPM lookup: single track -->
+  <dialog id="bpm-track-lookup-modal" class="modal" x-ref="bpmTrackLookupModal">
     <div class="modal-box w-11/12 max-w-3xl">
-      <h3 class="font-bold text-lg mb-4" x-text="bpmLookup.bulkMode ? 'Look Up BPM - All Tracks' : 'Look Up BPM'"></h3>
-      
-      <!-- Single Track Mode -->
-      <template x-if="!bpmLookup.bulkMode">
-        <div>
-          <!-- Track Info -->
-          <template x-if="bpmLookup.track">
-            <div class="mb-4 p-3 bg-base-200 rounded-lg">
-              <p class="font-semibold" x-text="bpmLookup.track.title || 'Untitled'"></p>
-              <p class="text-sm text-base-content/60" x-text="trackArtistForBpm(bpmLookup.track)"></p>
-            </div>
-          </template>
+      <h3 class="font-bold text-lg mb-4">Look Up BPM</h3>
 
-          <!-- Loading State -->
-          <template x-if="bpmLookup.loading">
-            <div class="py-6 text-center">
-              <span class="loading loading-spinner loading-lg text-primary"></span>
-              <p class="mt-2 text-base-content/70">Searching GetSongBPM.com...</p>
-            </div>
-          </template>
+      <div class="form-control mb-3">
+        <label class="label py-0"><span class="label-text text-sm">GetSongBPM search query</span></label>
+        <div class="flex gap-1 items-center">
+          <input
+            type="text"
+            class="input input-bordered input-sm flex-1 font-mono text-sm"
+            x-model="bpmTrackLookup.query"
+            :disabled="bpmTrackLookup.loading"
+            @keydown.enter.prevent="runTrackBpmLookup()">
+          <button
+            type="button"
+            @click="runTrackBpmLookup()"
+            class="btn btn-sm btn-square shrink-0"
+            title="Search"
+            :disabled="bpmTrackLookup.loading">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" /></svg>
+          </button>
+        </div>
+      </div>
 
-          <!-- Error State -->
-          <template x-if="!bpmLookup.loading && bpmLookup.error">
-            <div class="py-4">
-              <div class="alert alert-warning">
-                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                <span x-text="bpmLookup.errorMessage || 'No BPM data found for this track.'"></span>
-              </div>
-            </div>
-          </template>
-
-          <!-- Result State -->
-          <template x-if="!bpmLookup.loading && !bpmLookup.error && bpmLookup.result">
-            <div class="py-4">
-              <p class="text-sm text-base-content/70 mb-3">Found on GetSongBPM:</p>
-              <div class="overflow-x-auto">
-                <table class="table table-sm">
-                  <thead>
-                    <tr>
-                      <th>Matched Title</th>
-                      <th>Artist</th>
-                      <th class="text-right">BPM</th>
-                      <th class="text-center">Key</th>
-                      <th class="text-center">Sig</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr class="hover">
-                      <td x-text="bpmLookup.result.matchedTitle"></td>
-                      <td class="text-base-content/70" x-text="bpmLookup.result.matchedArtist"></td>
-                      <td class="text-right font-semibold" x-text="bpmLookup.result.bpm || '--'"></td>
-                      <td class="text-center" x-text="bpmLookup.result.key || '--'"></td>
-                      <td class="text-center" x-text="bpmLookup.result.timeSignature || '--'"></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </template>
+      <template x-if="bpmTrackLookup.track">
+        <div class="mb-4 p-3 bg-base-200 rounded-lg">
+          <p class="font-semibold" x-text="bpmTrackLookup.track.title || 'Untitled'"></p>
+          <p class="text-sm text-base-content/60" x-text="trackArtistForBpm(bpmTrackLookup.track)"></p>
         </div>
       </template>
 
-      <!-- Bulk Mode -->
+      <template x-if="bpmTrackLookup.loading">
+        <div class="py-6 text-center">
+          <span class="loading loading-spinner loading-lg text-primary"></span>
+          <p class="mt-2 text-base-content/70">Searching GetSongBPM.com...</p>
+        </div>
+      </template>
+
+      <template x-if="!bpmTrackLookup.loading && bpmTrackLookup.error">
+        <div class="py-4">
+          <div class="alert alert-warning">
+            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            <span x-text="bpmTrackLookup.errorMessage || 'No BPM data found for this track.'"></span>
+          </div>
+        </div>
+      </template>
+
+      <template x-if="!bpmTrackLookup.loading && !bpmTrackLookup.error && bpmTrackLookup.result">
+        <div class="py-4">
+          <p class="text-sm text-base-content/70 mb-3">Found on GetSongBPM:</p>
+          <div class="overflow-x-auto">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>Matched Title</th>
+                  <th>Artist</th>
+                  <th class="text-right">BPM</th>
+                  <th class="text-center">Key</th>
+                  <th class="text-center">Sig</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="hover">
+                  <td x-text="bpmTrackLookup.result.matchedTitle"></td>
+                  <td class="text-base-content/70" x-text="bpmTrackLookup.result.matchedArtist"></td>
+                  <td class="text-right font-semibold" x-text="bpmTrackLookup.result.bpm || '--'"></td>
+                  <td class="text-center" x-text="bpmTrackLookup.result.key || '--'"></td>
+                  <td class="text-center" x-text="bpmTrackLookup.result.timeSignature || '--'"></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </template>
+
+      <div class="modal-action">
+        <button type="button" @click="closeBpmTrackLookup()" class="btn btn-ghost">Cancel</button>
+        <template x-if="!bpmTrackLookup.loading && !bpmTrackLookup.error && bpmTrackLookup.result">
+          <button type="button" @click="applyBpmTrackData()" class="btn btn-primary">Apply to Track</button>
+        </template>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+      <button type="button" @click="closeBpmTrackLookup()">close</button>
+    </form>
+  </dialog>
+
+  <!-- BPM lookup: all tracks on side -->
+  <dialog id="bpm-lookup-modal" class="modal" x-ref="bpmLookupModal">
+    <div class="modal-box w-11/12 max-w-3xl">
+      <h3 class="font-bold text-lg mb-4">Look Up BPM - All Tracks</h3>
+
+      <div class="form-control mb-3">
+        <label class="label py-0 flex-col items-stretch gap-0 sm:flex-row sm:items-center">
+          <span class="label-text text-sm">Search template</span>
+          <span class="label-text-alt text-base-content/60 text-left sm:text-right">Placeholders <code class="text-xs">{title}</code> and <code class="text-xs">{artist}</code> use each track's title and resolved row artist</span>
+        </label>
+        <div class="flex gap-1 items-center">
+          <input
+            type="text"
+            class="input input-bordered input-sm flex-1 font-mono text-sm"
+            x-model="bpmLookup.queryTemplate"
+            :disabled="bpmLookup.isRunning">
+          <button
+            type="button"
+            @click="sendBulkBpmLookup()"
+            class="btn btn-sm btn-square shrink-0"
+            title="Run lookups"
+            :disabled="bpmLookup.isRunning">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" /></svg>
+          </button>
+        </div>
+      </div>
+
       <template x-if="bpmLookup.bulkMode">
         <div>
-          <p class="text-sm text-base-content/70 mb-3">Looking up BPM data for all tracks on this side:</p>
+          <p class="text-sm text-base-content/70 mb-3" x-show="!bpmLookup.isRunning && bpmLookup.tracks.length > 0 && !bpmLookup.tracks.some(t => t.status !== 'scheduled')">Press send to look up BPM for each track on this side.</p>
+          <p class="text-sm text-base-content/70 mb-3" x-show="bpmLookup.isRunning || bpmLookup.tracks.some(t => t.status !== 'scheduled')">Looking up BPM data for all tracks on this side:</p>
           
           <!-- Progress -->
           <div class="mb-4">
@@ -320,17 +370,14 @@
 
       <!-- Actions -->
       <div class="modal-action">
-        <button @click="closeBpmLookup()" class="btn btn-ghost">Cancel</button>
-        <template x-if="!bpmLookup.bulkMode && !bpmLookup.loading && !bpmLookup.error && bpmLookup.result">
-          <button @click="applyBpmData()" class="btn btn-primary">Apply to Track</button>
-        </template>
+        <button type="button" @click="closeBpmLookup()" class="btn btn-ghost">Cancel</button>
         <template x-if="bpmLookup.bulkMode && !bpmLookup.isRunning && bpmLookup.tracks.some(t => t.status === 'completed')">
-          <button @click="applyBulkBpmData()" class="btn btn-primary">Save Track Data</button>
+          <button type="button" @click="applyBulkBpmData()" class="btn btn-primary">Save Track Data</button>
         </template>
       </div>
     </div>
     <form method="dialog" class="modal-backdrop">
-      <button @click="closeBpmLookup()">close</button>
+      <button type="button" @click="closeBpmLookup()">close</button>
     </form>
   </dialog>
 </div>
@@ -356,6 +403,17 @@ function editPage() {
     /** @type {Record<string, true>} keys `${sideIndex}-${trackIndex}` for invalid BPM text */
     bpmFieldError: {},
 
+    bpmTrackLookup: {
+      query: '',
+      loading: false,
+      error: false,
+      errorMessage: null,
+      result: null,
+      track: null,
+      sideIndex: null,
+      trackIndex: null,
+    },
+
     bpmLookup: {
       loading: false,
       error: false,
@@ -364,11 +422,11 @@ function editPage() {
       track: null,
       sideIndex: null,
       trackIndex: null,
-      // Bulk lookup state
       bulkMode: false,
-      tracks: [], // Array of { title, position, status: 'scheduled'|'pending'|'completed'|'error', result: null }
+      queryTemplate: 'song:{title} artist:{artist}',
+      tracks: [],
       currentIndex: 0,
-      isRunning: false
+      isRunning: false,
     },
 
     bpmKey(sideIndex, trackIndex) {
@@ -415,6 +473,13 @@ function editPage() {
         return M.resolveTrackRowArtist(track, this.form.artist);
       }
       return this.form.artist;
+    },
+
+    expandBpmQueryTemplate(template, { title, artist }) {
+      const t = template == null ? '' : String(template);
+      return t
+        .replaceAll('{title}', String(title ?? '').trim())
+        .replaceAll('{artist}', String(artist ?? '').trim());
     },
 
     async refreshFromDiscogs() {
@@ -492,59 +557,70 @@ function editPage() {
     // BPM Lookup
     // ============================================
 
-    async openBpmLookup(sideIndex, trackIndex) {
+    openBpmLookup(sideIndex, trackIndex) {
       const track = this.form.sides[sideIndex].tracks[trackIndex];
-      
-      // Reset state
-      this.bpmLookup = {
-        loading: true,
+      const resolvedArtist = this.trackArtistForBpm(track);
+      const title = (track.title || '').trim();
+      this.bpmTrackLookup = {
+        query: `song:${title} artist:${resolvedArtist}`,
+        loading: false,
         error: false,
         errorMessage: null,
         result: null,
-        track: track,
-        sideIndex: sideIndex,
-        trackIndex: trackIndex
+        track,
+        sideIndex,
+        trackIndex,
       };
-      
-      // Open modal
-      this.$refs.bpmLookupModal.showModal();
-      
-      // Perform lookup
+      this.$refs.bpmTrackLookupModal.showModal();
+    },
+
+    async runTrackBpmLookup() {
+      const tl = this.bpmTrackLookup;
+      const track = tl.track;
+      if (!track) return;
+      const q = (tl.query || '').trim();
+      if (!q) {
+        tl.error = true;
+        tl.errorMessage = 'Enter a search query';
+        tl.loading = false;
+        return;
+      }
+      tl.loading = true;
+      tl.error = false;
+      tl.errorMessage = null;
+      tl.result = null;
       try {
+        const artist = this.trackArtistForBpm(track);
+        const title = (track.title || '').trim();
         const response = await fetch('/api/bpm/lookup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            artist: this.trackArtistForBpm(track),
-            title: track.title
-          })
+            artist,
+            title,
+            lookup: q,
+          }),
         });
-        
         const data = await response.json();
-        
         if (!response.ok || !data.success) {
-          this.bpmLookup.loading = false;
-          this.bpmLookup.error = true;
-          this.bpmLookup.errorMessage = data.message || data.error || 'Failed to look up BPM';
+          tl.loading = false;
+          tl.error = true;
+          tl.errorMessage = data.message || data.error || 'Failed to look up BPM';
           return;
         }
-        
-        this.bpmLookup.loading = false;
-        this.bpmLookup.result = data.data;
+        tl.loading = false;
+        tl.result = data.data;
       } catch (error) {
         console.error('BPM lookup error:', error);
-        this.bpmLookup.loading = false;
-        this.bpmLookup.error = true;
-        this.bpmLookup.errorMessage = 'Failed to connect to BPM service';
+        tl.loading = false;
+        tl.error = true;
+        tl.errorMessage = 'Failed to connect to BPM service';
       }
     },
 
-    applyBpmData() {
-      if (!this.bpmLookup.result) return;
-      
-      const { sideIndex, trackIndex, result } = this.bpmLookup;
-      
-      // Apply the BPM data directly to the form
+    applyBpmTrackData() {
+      if (!this.bpmTrackLookup.result) return;
+      const { sideIndex, trackIndex, result } = this.bpmTrackLookup;
       if (result.bpm != null) {
         this.form.sides[sideIndex].tracks[trackIndex].bpm = Number(result.bpm);
       }
@@ -552,13 +628,27 @@ function editPage() {
         this.form.sides[sideIndex].tracks[trackIndex].key = result.key;
       }
       if (result.timeSignature) {
-        this.form.sides[sideIndex].tracks[trackIndex].timeSignature = result.timeSignature;
+        this.form.sides[sideIndex].tracks[trackIndex].timeSignature =
+          result.timeSignature;
       }
       if (result.openKey) {
         this.form.sides[sideIndex].tracks[trackIndex].openKey = result.openKey;
       }
+      this.closeBpmTrackLookup();
+    },
 
-      this.closeBpmLookup();
+    closeBpmTrackLookup() {
+      this.$refs.bpmTrackLookupModal.close();
+      this.bpmTrackLookup = {
+        query: '',
+        loading: false,
+        error: false,
+        errorMessage: null,
+        result: null,
+        track: null,
+        sideIndex: null,
+        trackIndex: null,
+      };
     },
 
     closeBpmLookup() {
@@ -572,9 +662,10 @@ function editPage() {
         sideIndex: null,
         trackIndex: null,
         bulkMode: false,
+        queryTemplate: 'song:{title} artist:{artist}',
         tracks: [],
         currentIndex: 0,
-        isRunning: false
+        isRunning: false,
       };
     },
 
@@ -594,7 +685,6 @@ function editPage() {
         result: null
       }));
       
-      // Reset state for bulk mode
       this.bpmLookup = {
         loading: false,
         error: false,
@@ -604,15 +694,24 @@ function editPage() {
         sideIndex: sideIndex,
         trackIndex: null,
         bulkMode: true,
+        queryTemplate: 'song:{title} artist:{artist}',
         tracks: tracks,
         currentIndex: 0,
-        isRunning: true
+        isRunning: false,
       };
-      
-      // Open modal
+
       this.$refs.bpmLookupModal.showModal();
-      
-      // Start processing tracks with delay
+    },
+
+    async sendBulkBpmLookup() {
+      if (this.bpmLookup.isRunning) return;
+      for (const t of this.bpmLookup.tracks) {
+        if ((t.title || '').trim()) {
+          t.status = 'scheduled';
+          t.result = null;
+        }
+      }
+      this.bpmLookup.isRunning = true;
       await this.runBulkLookup();
     },
 
@@ -635,15 +734,22 @@ function editPage() {
         try {
           const side = this.form.sides[this.bpmLookup.sideIndex];
           const formTrack = side?.tracks?.[track.trackIndex];
+          const rowArtist = formTrack
+            ? this.trackArtistForBpm(formTrack)
+            : this.form.artist;
+          const rowTitle = (track.title || '').trim();
+          const lookup = this.expandBpmQueryTemplate(
+            this.bpmLookup.queryTemplate,
+            { title: rowTitle, artist: rowArtist },
+          );
           const response = await fetch('/api/bpm/lookup', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              artist: formTrack
-                ? this.trackArtistForBpm(formTrack)
-                : this.form.artist,
-              title: track.title
-            })
+              artist: rowArtist,
+              title: rowTitle,
+              lookup,
+            }),
           });
           
           const data = await response.json();
