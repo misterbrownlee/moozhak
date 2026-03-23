@@ -1,10 +1,13 @@
 import {
   createBoxSetItems,
   extractTracksFromSides,
+  formatTrackArtistCredit,
   getTrackSide,
   groupTracksBySide,
   isBoxSet,
+  isCompilationRelease,
   mergeBpmIntoSides,
+  mergeLibraryItemFromDiscogsRelease,
   normalizeLibraryItem,
   parseBoxSetAlbums,
   parseTrackBpm,
@@ -13,6 +16,7 @@ import {
   normalizeStoredBpmValue,
   normalizeLibraryItemTrackBpms,
   normalizeSetlistTrackBpms,
+  resolveTrackRowArtist,
 } from '../../../core/domain/library.js';
 
 describe('core/domain/library', () => {
@@ -69,6 +73,97 @@ describe('core/domain/library', () => {
     });
   });
 
+  describe('formatTrackArtistCredit', () => {
+    it('prefers trackArtist then joins artists', () => {
+      expect(formatTrackArtistCredit({ trackArtist: '  X  ' })).toBe('X');
+      expect(
+        formatTrackArtistCredit({
+          artists: [{ name: 'A' }, { name: 'B' }],
+        }),
+      ).toBe('A, B');
+      expect(formatTrackArtistCredit({})).toBe('');
+    });
+  });
+
+  describe('resolveTrackRowArtist', () => {
+    it('falls back to album artist', () => {
+      expect(resolveTrackRowArtist({}, 'Various')).toBe('Various');
+      expect(resolveTrackRowArtist({ trackArtist: 'Solo' }, 'Various')).toBe(
+        'Solo',
+      );
+      expect(resolveTrackRowArtist({}, '')).toBe('Unknown Artist');
+    });
+  });
+
+  describe('isCompilationRelease', () => {
+    it('detects Compilation in format descriptions', () => {
+      expect(
+        isCompilationRelease({
+          formats: [{ descriptions: ['LP', 'Compilation'] }],
+        }),
+      ).toBe(true);
+      expect(
+        isCompilationRelease({
+          formats: [{ descriptions: ['Album'] }],
+        }),
+      ).toBe(false);
+    });
+  });
+
+  describe('mergeLibraryItemFromDiscogsRelease', () => {
+    it('updates tracks and preserves BPM fields', () => {
+      const item = {
+        id: 'lib_1',
+        artist: 'Various',
+        title: 'Old',
+        notes: 'mine',
+        discogsId: 10,
+        type: 'release',
+        sides: [
+          {
+            label: 'A',
+            tracks: [
+              {
+                position: 'A1',
+                title: 'Song',
+                bpm: 120,
+                key: 'Am',
+                timeSignature: '4/4',
+                openKey: '8m',
+              },
+            ],
+          },
+        ],
+      };
+      const release = {
+        id: 10,
+        title: 'New Title',
+        year: 1999,
+        formats: [{ name: 'Vinyl' }],
+        tracklist: [
+          {
+            type_: 'track',
+            position: 'A1',
+            title: 'Song',
+            duration: '3:00',
+            artists: [{ name: 'Feat Artist' }],
+          },
+        ],
+      };
+      const out = mergeLibraryItemFromDiscogsRelease(item, release);
+      expect(out.title).toBe('New Title');
+      expect(out.year).toBe('1999');
+      expect(out.artist).toBe('Various');
+      expect(out.notes).toBe('mine');
+      const tr = out.sides[0].tracks[0];
+      expect(tr.trackArtist).toBe('Feat Artist');
+      expect(tr.bpm).toBe(120);
+      expect(tr.key).toBe('Am');
+      expect(tr.timeSignature).toBe('4/4');
+      expect(tr.openKey).toBe('8m');
+    });
+  });
+
   describe('normalizeLibraryItem', () => {
     it('applies defaults and groups sides', () => {
       const body = {
@@ -78,6 +173,7 @@ describe('core/domain/library', () => {
       };
       const item = normalizeLibraryItem(body);
       expect(item.artist).toBe('Unknown Artist');
+      expect(item.compilation).toBe(false);
       expect(item.sides).toEqual([
         { label: 'A', tracks: [{ position: 'A1', title: 'A' }] },
       ]);

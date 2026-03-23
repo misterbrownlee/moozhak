@@ -4,6 +4,204 @@
  */
 
 /**
+ * @param {unknown} track
+ * @returns {string}
+ */
+export function formatTrackArtistCredit(track) {
+  if (!track || typeof track !== 'object') return '';
+  if (typeof track.trackArtist === 'string' && track.trackArtist.trim()) {
+    return track.trackArtist.trim();
+  }
+  const artists = track.artists;
+  if (!Array.isArray(artists) || artists.length === 0) return '';
+  return artists
+    .map((a) => (a && typeof a.name === 'string' ? a.name.trim() : ''))
+    .filter(Boolean)
+    .join(', ');
+}
+
+/**
+ * @param {unknown} track
+ * @param {unknown} albumArtist
+ * @returns {string}
+ */
+export function resolveTrackRowArtist(track, albumArtist) {
+  const credit = formatTrackArtistCredit(track);
+  if (credit) return credit;
+  const album = String(albumArtist ?? '').trim();
+  if (album) return album;
+  return 'Unknown Artist';
+}
+
+/**
+ * @param {Record<string, unknown>|null|undefined} discogsBody
+ * @returns {boolean}
+ */
+export function isCompilationRelease(discogsBody) {
+  if (!discogsBody || typeof discogsBody !== 'object') return false;
+  const formats = discogsBody.formats;
+  if (Array.isArray(formats)) {
+    for (const f of formats) {
+      if (!f || typeof f !== 'object') continue;
+      const desc = f.descriptions;
+      if (Array.isArray(desc)) {
+        for (const d of desc) {
+          if (typeof d === 'string' && d.toLowerCase().includes('compilation')) {
+            return true;
+          }
+        }
+      }
+    }
+  }
+  for (const key of ['genres', 'styles']) {
+    const arr = discogsBody[key];
+    if (Array.isArray(arr)) {
+      for (const g of arr) {
+        if (
+          typeof g === 'string' &&
+          g.toLowerCase().includes('compilation')
+        ) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * @param {Record<string, unknown>} track
+ * @returns {Record<string, unknown>}
+ */
+export function enrichTrackWithArtistCredit(track) {
+  const credit = formatTrackArtistCredit(track);
+  const out = { ...track };
+  if (credit) out.trackArtist = credit;
+  return out;
+}
+
+/**
+ * @param {Record<string, unknown>} item
+ * @param {Record<string, unknown>} release Discogs getRelease JSON
+ * @returns {Record<string, unknown>}
+ */
+export function mergeLibraryItemFromDiscogsRelease(item, release) {
+  if (!item || typeof item !== 'object') return item;
+  if (!release || typeof release !== 'object') return { ...item };
+
+  const next = { ...item };
+  const formats = release.formats;
+  const formatStr = Array.isArray(formats)
+    ? formats.map((f) => (f && f.name ? f.name : '')).filter(Boolean).join(', ')
+    : '';
+  const images = release.images;
+  const firstImg = Array.isArray(images) && images[0] ? images[0] : null;
+  const cover =
+    (firstImg && typeof firstImg.uri === 'string' && firstImg.uri) ||
+    (typeof release.thumb === 'string' && release.thumb) ||
+    next.cover ||
+    '';
+  const thumb =
+    (firstImg && typeof firstImg.uri150 === 'string' && firstImg.uri150) ||
+    (typeof release.thumb === 'string' && release.thumb) ||
+    cover ||
+    next.thumb ||
+    '';
+
+  if (typeof release.title === 'string' && release.title) next.title = release.title;
+  if (release.year != null && release.year !== '') next.year = String(release.year);
+  if (formatStr) next.format = formatStr;
+  next.thumb = thumb;
+  next.cover = cover;
+  next.compilation = isCompilationRelease(release);
+  next.type = 'release';
+  if (release.id != null) next.discogsId = release.id;
+
+  const remoteList = release.tracklist;
+  if (!Array.isArray(remoteList) || remoteList.length === 0) {
+    return next;
+  }
+
+  const localFlat = extractTracksFromSides(item.sides);
+  const consumed = new Set();
+
+  /**
+   * @param {string} pos
+   * @param {string} titleLower
+   * @returns {number}
+   */
+  function findLocalIndex(pos, titleLower) {
+    const p = pos.trim();
+    if (p) {
+      for (let i = 0; i < localFlat.length; i++) {
+        if (consumed.has(i)) continue;
+        const lt = localFlat[i];
+        if (String(lt?.position ?? '').trim() === p) return i;
+      }
+    }
+    if (titleLower) {
+      for (let i = 0; i < localFlat.length; i++) {
+        if (consumed.has(i)) continue;
+        const lt = localFlat[i];
+        const t = String(lt?.title ?? '')
+          .trim()
+          .toLowerCase();
+        if (t && t === titleLower) return i;
+      }
+    }
+    return -1;
+  }
+
+  const mergedTracklist = [];
+  for (const entry of remoteList) {
+    if (!entry || typeof entry !== 'object') continue;
+    const type_ = entry.type_;
+    if (type_ === 'heading') {
+      mergedTracklist.push({ ...entry });
+      continue;
+    }
+    const pos = String(entry.position ?? '').trim();
+    const titleLower = String(entry.title ?? '')
+      .trim()
+      .toLowerCase();
+    const li = findLocalIndex(pos, titleLower);
+    const local = li >= 0 ? localFlat[li] : null;
+    if (li >= 0) consumed.add(li);
+
+    const credit = formatTrackArtistCredit(entry);
+    /** @type {Record<string, unknown>} */
+    const merged = {
+      ...entry,
+      ...(credit ? { trackArtist: credit } : {}),
+    };
+    if (local && typeof local === 'object') {
+      if (Object.prototype.hasOwnProperty.call(local, 'bpm')) {
+        merged.bpm = local.bpm;
+      }
+      if (Object.prototype.hasOwnProperty.call(local, 'key')) {
+        merged.key = local.key;
+      }
+      if (Object.prototype.hasOwnProperty.call(local, 'timeSignature')) {
+        merged.timeSignature = local.timeSignature;
+      }
+      if (Object.prototype.hasOwnProperty.call(local, 'openKey')) {
+        merged.openKey = local.openKey;
+      }
+    }
+    mergedTracklist.push(merged);
+  }
+
+  for (let i = 0; i < localFlat.length; i++) {
+    if (!consumed.has(i)) {
+      mergedTracklist.push({ ...localFlat[i] });
+    }
+  }
+
+  next.sides = groupTracksBySide(mergedTracklist);
+  return next;
+}
+
+/**
  * @param {string} position
  * @returns {string}
  */
@@ -92,7 +290,17 @@ export function parseBoxSetAlbums(tracklist) {
  * @returns {Record<string, unknown>}
  */
 export function normalizeLibraryItem(body, boxSetTitle = null) {
-  const tracklist = body.tracklist || [];
+  const rawList = body.tracklist || [];
+  const tracklist = rawList.map((t) =>
+    t && typeof t === 'object' ? enrichTrackWithArtistCredit(t) : t,
+  );
+
+  let compilation;
+  if (typeof body.compilation === 'boolean') {
+    compilation = body.compilation;
+  } else {
+    compilation = isCompilationRelease(body);
+  }
 
   const item = {
     discogsId: body.discogsId,
@@ -105,6 +313,7 @@ export function normalizeLibraryItem(body, boxSetTitle = null) {
     cover: body.cover || body.thumb || '',
     sides: groupTracksBySide(tracklist),
     notes: body.notes || '',
+    compilation,
   };
 
   if (boxSetTitle) {
@@ -127,6 +336,11 @@ export function createBoxSetItems(body) {
 
   const boxSetTitle = body.title;
 
+  const boxCompilation =
+    typeof body.compilation === 'boolean'
+      ? body.compilation
+      : isCompilationRelease(body);
+
   return albums.map((album) => {
     return normalizeLibraryItem(
       {
@@ -139,6 +353,7 @@ export function createBoxSetItems(body) {
         thumb: body.thumb,
         tracklist: album.tracks,
         notes: body.notes || '',
+        compilation: boxCompilation,
       },
       boxSetTitle,
     );

@@ -249,6 +249,32 @@ describe('setlists domain', () => {
     it('returns null without item id', () => {
       expect(denormalizeTrackFromLibraryItem(null, 'A1')).toBeNull();
     });
+
+    it('uses per-track artist when set', () => {
+      const item = {
+        id: 'lib_1',
+        title: 'VA',
+        artist: 'Various',
+        discogsId: 1,
+        thumb: '',
+        cover: '',
+        sides: [
+          {
+            label: 'A',
+            tracks: [
+              {
+                position: 'A1',
+                title: 'One',
+                trackArtist: 'Guest',
+              },
+            ],
+          },
+        ],
+      };
+      expect(denormalizeTrackFromLibraryItem(item, 'A1')).toMatchObject({
+        artist: 'Guest',
+      });
+    });
   });
 
   describe('flattenLibraryToTrackRows', () => {
@@ -273,10 +299,30 @@ describe('setlists domain', () => {
           libraryItemId: 'l1',
           position: 'A1',
           albumTitle: 'LP',
+          artist: 'Band',
           trackTitle: 'T1',
           bpm: 100,
         }),
       ]);
+    });
+
+    it('uses trackArtist over album artist', () => {
+      const rows = flattenLibraryToTrackRows([
+        {
+          id: 'l1',
+          title: 'Comp',
+          artist: 'Various',
+          discogsId: 1,
+          thumb: '',
+          sides: [
+            {
+              label: 'A',
+              tracks: [{ position: 'A1', title: 'T', trackArtist: 'Singer' }],
+            },
+          ],
+        },
+      ]);
+      expect(rows[0].artist).toBe('Singer');
     });
   });
 

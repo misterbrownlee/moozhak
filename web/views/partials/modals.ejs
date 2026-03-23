@@ -17,17 +17,24 @@
               <div class="w-48 h-48 bg-base-300 rounded-lg flex items-center justify-center text-4xl">🎵</div>
             </template>
           </div>
-          <div class="flex-1">
-            <h3 class="text-2xl font-bold">
-              <span x-text="detailsData.title"></span>
-              <template x-if="detailsData.year">
-                <span x-text="' (' + detailsData.year + ')'"></span>
+          <div class="flex-1 flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+            <div class="min-w-0">
+              <h3 class="text-2xl font-bold">
+                <span x-text="detailsData.title"></span>
+                <template x-if="detailsData.year">
+                  <span x-text="' (' + detailsData.year + ')'"></span>
+                </template>
+              </h3>
+              <p class="text-lg text-base-content/70 mt-1" x-text="detailsData.artist"></p>
+              <template x-if="detailsData.boxSet">
+                <p class="text-sm text-primary mt-1" x-text="'[boxed set - ' + detailsData.boxSet + ']'"></p>
               </template>
-            </h3>
-            <p class="text-lg text-base-content/70 mt-1" x-text="detailsData.artist"></p>
-            <template x-if="detailsData.boxSet">
-              <p class="text-sm text-primary mt-1" x-text="'[boxed set - ' + detailsData.boxSet + ']'"></p>
-            </template>
+            </div>
+            <a
+              x-show="detailsData.libraryItemId"
+              class="btn btn-sm btn-outline shrink-0"
+              :href="'/library/' + detailsData.libraryItemId + '/edit'"
+            >Edit</a>
           </div>
         </div>
         
@@ -41,9 +48,10 @@
                       <tr>
                         <th class="w-16">#</th>
                         <th>Title</th>
-                        <th class="w-16 text-right">BPM</th>
-                        <th class="w-16 text-center">Key</th>
-                        <th class="w-16 text-center">Sig</th>
+                        <th>Artist</th>
+                        <th class="w-16 text-right" x-show="detailsData.libraryItemId">BPM</th>
+                        <th class="w-16 text-center" x-show="detailsData.libraryItemId">Key</th>
+                        <th class="w-16 text-center" x-show="detailsData.libraryItemId">Sig</th>
                         <th class="w-20 text-right">Duration</th>
                         <th class="whitespace-nowrap" x-show="detailsData.libraryItemId">Set</th>
                       </tr>
@@ -53,9 +61,10 @@
                         <tr class="hover">
                           <td class="w-16 text-base-content/60" x-text="track.position || i + 1"></td>
                           <td x-text="track.title || 'Untitled'"></td>
-                          <td class="w-16 text-right text-base-content/60" x-text="track.bpm || '--'"></td>
-                          <td class="w-16 text-center text-base-content/60" x-text="track.key || '--'"></td>
-                          <td class="w-16 text-center text-base-content/60" x-text="track.timeSignature || '--'"></td>
+                          <td class="text-base-content/80 text-sm" x-text="detailsTrackRowArtist(track)"></td>
+                          <td class="w-16 text-right text-base-content/60" x-show="detailsData.libraryItemId" x-text="track.bpm || '--'"></td>
+                          <td class="w-16 text-center text-base-content/60" x-show="detailsData.libraryItemId" x-text="track.key || '--'"></td>
+                          <td class="w-16 text-center text-base-content/60" x-show="detailsData.libraryItemId" x-text="track.timeSignature || '--'"></td>
                           <td class="w-20 text-right text-base-content/60" x-text="track.duration || ''"></td>
                           <td x-show="detailsData.libraryItemId">
                             <button

@@ -6,6 +6,19 @@
     <div class="flex items-center gap-4">
       <a href="/library" class="btn btn-ghost btn-sm">← Back</a>
       <h2 class="text-2xl font-bold">Edit Album</h2>
+      <button
+        type="button"
+        class="btn btn-sm btn-ghost"
+        title="Refresh from Discogs"
+        aria-label="Refresh from Discogs"
+        @click="refreshFromDiscogs()"
+        :disabled="refreshing || discogsId == null"
+      >
+        <span x-show="refreshing" class="loading loading-spinner loading-xs"></span>
+        <% if (typeof reloadIconSvg !== 'undefined' && reloadIconSvg) { %>
+          <span class="inline-flex w-5 h-5 items-center justify-center [&_svg]:w-5 [&_svg]:h-5" x-show="!refreshing" aria-hidden="true"><%- reloadIconSvg %></span>
+        <% } %>
+      </button>
     </div>
     <div class="flex gap-2">
       <a href="/library" class="btn btn-ghost">Cancel</a>
@@ -50,6 +63,12 @@
             <input type="text" x-model="form.format" class="input input-bordered">
           </div>
           <div class="form-control md:col-span-2">
+            <label class="label cursor-pointer justify-start gap-3">
+              <input type="checkbox" class="checkbox checkbox-primary" x-model="form.compilation">
+              <span class="label-text">Compilation (show per-track artist)</span>
+            </label>
+          </div>
+          <div class="form-control md:col-span-2">
             <label class="label"><span class="label-text">Notes</span></label>
             <textarea x-model="form.notes" class="textarea textarea-bordered h-20" placeholder="Personal notes..."></textarea>
           </div>
@@ -89,6 +108,7 @@
                 <tr class="text-xs">
                   <th class="w-16">Position</th>
                   <th>Title</th>
+                  <th class="min-w-[7rem]" x-show="form.compilation">Artist</th>
                   <th class="w-16">Duration</th>
                   <th class="w-20">BPM</th>
                   <th class="w-16">Key</th>
@@ -104,6 +124,9 @@
                     </td>
                     <td>
                       <input type="text" x-model="track.title" class="input input-bordered input-xs w-full" placeholder="Track title">
+                    </td>
+                    <td x-show="form.compilation">
+                      <input type="text" x-model="track.trackArtist" class="input input-bordered input-xs w-full" placeholder="Track artist">
                     </td>
                     <td>
                       <input type="text" x-model="track.duration" class="input input-bordered input-xs w-full" placeholder="3:45">
@@ -167,7 +190,7 @@
           <template x-if="bpmLookup.track">
             <div class="mb-4 p-3 bg-base-200 rounded-lg">
               <p class="font-semibold" x-text="bpmLookup.track.title || 'Untitled'"></p>
-              <p class="text-sm text-base-content/60" x-text="form.artist"></p>
+              <p class="text-sm text-base-content/60" x-text="trackArtistForBpm(bpmLookup.track)"></p>
             </div>
           </template>
 
@@ -316,13 +339,16 @@
 function editPage() {
   return {
     saving: false,
+    refreshing: false,
     itemId: '<%= item.id %>',
+    discogsId: <%- item.discogsId != null && item.discogsId !== '' ? JSON.stringify(item.discogsId) : 'null' %>,
     form: {
       title: '<%= item.title?.replace(/'/g, "\\'") || "" %>',
       artist: '<%= item.artist?.replace(/'/g, "\\'") || "" %>',
       year: '<%= item.year || "" %>',
       format: '<%= item.format?.replace(/'/g, "\\'") || "" %>',
       notes: `<%= item.notes?.replace(/`/g, "\\`").replace(/\$/g, "\\$") || "" %>`,
+      compilation: <%= item.compilation === true ? 'true' : 'false' %>,
       sides: <%- JSON.stringify(item.sides || []) %>
     },
     
@@ -381,6 +407,41 @@ function editPage() {
         this.form.sides[si].tracks[ti].bpm = value;
       }
       return true;
+    },
+
+    trackArtistForBpm(track) {
+      const M = window.MoozhakDomain;
+      if (M?.resolveTrackRowArtist) {
+        return M.resolveTrackRowArtist(track, this.form.artist);
+      }
+      return this.form.artist;
+    },
+
+    async refreshFromDiscogs() {
+      if (this.discogsId == null) return;
+      this.refreshing = true;
+      try {
+        const response = await fetch(
+          `/api/library/${this.itemId}/refresh-discogs`,
+          { method: 'POST' },
+        );
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || 'Refresh failed');
+        }
+        const item = data.item;
+        this.form.title = item.title || '';
+        this.form.artist = item.artist || '';
+        this.form.year = item.year || '';
+        this.form.format = item.format || '';
+        this.form.notes = item.notes || '';
+        this.form.compilation = !!item.compilation;
+        this.form.sides = item.sides || [];
+      } catch (e) {
+        alert(e.message || 'Refresh failed');
+      } finally {
+        this.refreshing = false;
+      }
     },
 
     init() {
@@ -454,7 +515,7 @@ function editPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            artist: this.form.artist,
+            artist: this.trackArtistForBpm(track),
             title: track.title
           })
         });
@@ -493,7 +554,10 @@ function editPage() {
       if (result.timeSignature) {
         this.form.sides[sideIndex].tracks[trackIndex].timeSignature = result.timeSignature;
       }
-      
+      if (result.openKey) {
+        this.form.sides[sideIndex].tracks[trackIndex].openKey = result.openKey;
+      }
+
       this.closeBpmLookup();
     },
 
@@ -569,11 +633,15 @@ function editPage() {
         track.status = 'pending';
         
         try {
+          const side = this.form.sides[this.bpmLookup.sideIndex];
+          const formTrack = side?.tracks?.[track.trackIndex];
           const response = await fetch('/api/bpm/lookup', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              artist: this.form.artist,
+              artist: formTrack
+                ? this.trackArtistForBpm(formTrack)
+                : this.form.artist,
               title: track.title
             })
           });
@@ -618,9 +686,12 @@ function editPage() {
           if (track.result.timeSignature) {
             formTrack.timeSignature = track.result.timeSignature;
           }
+          if (track.result.openKey) {
+            formTrack.openKey = track.result.openKey;
+          }
         }
       }
-      
+
       this.closeBpmLookup();
     },
 
@@ -641,6 +712,7 @@ function editPage() {
             year: this.form.year,
             format: this.form.format,
             notes: this.form.notes,
+            compilation: this.form.compilation,
             sides: this.form.sides
           })
         });

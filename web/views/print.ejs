@@ -46,6 +46,7 @@
                       <tr>
                         <td class="w-[15px] pr-[1px] print:text-black" x-text="track.position || i + 1"></td>
                         <td class="print:text-black" x-text="track.title || 'Untitled'"></td>
+                        <td class="print:text-black text-sm max-w-[8rem] truncate" x-text="printTrackRowArtist(track)"></td>
                         <td class="w-12 text-right text-base-content/60 print:text-black" x-text="track.bpm || '--'"></td>
                         <td class="w-12 text-center text-base-content/60 print:text-black" x-text="track.key || '--'"></td>
                         <td class="w-12 text-center text-base-content/60 print:text-black" x-text="track.timeSignature || '--'"></td>
@@ -69,6 +70,7 @@
                 <tr>
                   <td class="w-[15px] pr-[1px] print:text-black" x-text="track.position || i + 1"></td>
                   <td class="print:text-black" x-text="track.title || 'Untitled'"></td>
+                  <td class="print:text-black text-sm max-w-[8rem] truncate" x-text="printTrackRowArtist(track)"></td>
                   <td class="w-12 text-right text-base-content/60 print:text-black" x-text="track.bpm || '--'"></td>
                   <td class="w-12 text-center text-base-content/60 print:text-black" x-text="track.key || '--'"></td>
                   <td class="w-12 text-center text-base-content/60 print:text-black" x-text="track.timeSignature || '--'"></td>
@@ -143,6 +145,15 @@ function printPage() {
       if (typeof v === 'number' && Number.isFinite(v)) return v;
       const parsed = Number(String(v ?? '').trim());
       return Number.isFinite(parsed) ? parsed : 0;
+    },
+
+    printTrackRowArtist(track) {
+      const album = this.item?.artist ?? '';
+      const M = window.MoozhakDomain;
+      if (M?.resolveTrackRowArtist) {
+        return M.resolveTrackRowArtist(track, album);
+      }
+      return album || 'Unknown Artist';
     },
 
     getSortedSides() {

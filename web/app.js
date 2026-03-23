@@ -34,6 +34,10 @@ export function createApp() {
     join(__dirname, 'src/icons/note.svg'),
     'utf-8',
   );
+  app.locals.reloadIconSvg = readFileSync(
+    join(__dirname, 'src/icons/reload.svg'),
+    'utf-8',
+  );
 
   // ============================================
   // View Engine Setup

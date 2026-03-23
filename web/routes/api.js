@@ -4,6 +4,7 @@ import {
   extractTracksFromSides,
   isBoxSet,
   mergeBpmIntoSides,
+  mergeLibraryItemFromDiscogsRelease,
   normalizeLibraryItem,
 } from '../../core/domain/library.js';
 import {
@@ -341,6 +342,59 @@ router.get(
     }
 
     res.json(item);
+  }),
+);
+
+router.post(
+  '/library/:id/refresh-discogs',
+  asyncHandler(async (req, res) => {
+    const item = getLibraryItem(req.params.id);
+    if (!item) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+    if (item.discogsId == null || item.discogsId === '') {
+      return res.status(400).json({
+        error: 'discogsId is required to refresh from Discogs',
+      });
+    }
+
+    const { db, isAuthenticated } = req.discogs;
+    let releaseId = parseInt(String(item.discogsId), 10);
+    if (Number.isNaN(releaseId)) {
+      return res.status(400).json({ error: 'Invalid discogsId' });
+    }
+
+    if (item.type === 'master') {
+      const master = await getMaster(db, releaseId, { isAuthenticated });
+      if (!master) {
+        return res.status(404).json({ error: 'Master not found' });
+      }
+      const mr = master.main_release;
+      if (mr == null) {
+        return res
+          .status(404)
+          .json({ error: 'No main release linked for this master' });
+      }
+      releaseId =
+        typeof mr === 'object' && mr != null && mr.id != null
+          ? parseInt(String(mr.id), 10)
+          : parseInt(String(mr), 10);
+      if (Number.isNaN(releaseId)) {
+        return res.status(400).json({ error: 'Invalid main release id' });
+      }
+    }
+
+    const release = await getRelease(db, releaseId, { isAuthenticated });
+    if (!release) {
+      return res
+        .status(502)
+        .json({ error: 'Could not fetch release from Discogs' });
+    }
+
+    const merged = mergeLibraryItemFromDiscogsRelease(item, release);
+    const updated = updateLibraryItem(req.params.id, merged);
+    logUserAction('library_refresh_discogs', { id: req.params.id });
+    res.json({ item: updated });
   }),
 );
 

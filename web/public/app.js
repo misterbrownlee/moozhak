@@ -310,6 +310,12 @@ function vinylApp() {
         const cover = data.images?.[0]?.uri || data.thumb || '';
         const thumb = data.images?.[0]?.uri150 || data.thumb || cover;
 
+        const M = window.MoozhakDomain;
+        const compilation =
+          typeof M?.isCompilationRelease === 'function'
+            ? M.isCompilationRelease(data)
+            : false;
+
         this.detailsData = {
           id,
           type,
@@ -320,6 +326,7 @@ function vinylApp() {
           thumb: thumb,
           cover: cover,
           tracklist: data.tracklist || [],
+          compilation,
           inLibrary: this.libraryCache.some(
             (item) => String(item.discogsId) === String(id),
           ),
@@ -357,11 +364,21 @@ function vinylApp() {
         cover: item.cover || item.thumb || '',
         sides: item.sides || [],
         boxSet: item.boxSet || null,
+        compilation: !!item.compilation,
         inLibrary: true,
         libraryItemId: item.id,
       };
 
       this.$refs.detailsModal.showModal();
+    },
+
+    detailsTrackRowArtist(track) {
+      const album = this.detailsData?.artist ?? '';
+      const M = window.MoozhakDomain;
+      if (M?.resolveTrackRowArtist) {
+        return M.resolveTrackRowArtist(track, album);
+      }
+      return album || 'Unknown Artist';
     },
 
     membershipKeyForRow(row) {
@@ -794,6 +811,7 @@ function vinylApp() {
             thumb: this.detailsData.thumb,
             cover: this.detailsData.cover,
             tracklist: this.detailsData.tracklist,
+            compilation: !!this.detailsData.compilation,
           }),
         });
 
@@ -839,6 +857,12 @@ function vinylApp() {
         const cover = data.images?.[0]?.uri || data.thumb || '';
         const thumb = data.images?.[0]?.uri150 || data.thumb || cover;
 
+        const M = window.MoozhakDomain;
+        const compilation =
+          typeof M?.isCompilationRelease === 'function'
+            ? M.isCompilationRelease(data)
+            : false;
+
         const addResponse = await fetch('/api/library', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -852,6 +876,7 @@ function vinylApp() {
             thumb: thumb,
             cover: cover,
             tracklist: data.tracklist || [],
+            compilation,
           }),
         });
 

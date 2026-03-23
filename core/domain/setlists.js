@@ -3,7 +3,11 @@
  * Server-only; not copied to moozhak-domain.js by default.
  */
 
-import { extractTracksFromSides, parseTrackBpm } from './library.js';
+import {
+  extractTracksFromSides,
+  parseTrackBpm,
+  resolveTrackRowArtist,
+} from './library.js';
 
 /** @typedef {{ id: string, name?: string, tracks?: unknown[] }} SetDocument */
 
@@ -194,7 +198,7 @@ export function denormalizeTrackFromLibraryItem(item, trackPosition) {
     trackPosition: t.position != null ? t.position : trackPosition,
     discogsId: item.discogsId,
     title: t.title || 'Untitled',
-    artist: item.artist || 'Unknown Artist',
+    artist: resolveTrackRowArtist(t, item.artist),
     albumTitle: item.title || '',
     bpm: t.bpm ?? null,
     key: t.key ?? null,
@@ -220,7 +224,7 @@ export function flattenLibraryToTrackRows(items) {
         libraryItemId: item.id,
         position: t.position ?? '',
         albumTitle: item.title || '',
-        artist: item.artist || 'Unknown Artist',
+        artist: resolveTrackRowArtist(t, item.artist),
         trackTitle: t.title || 'Untitled',
         bpm: t.bpm ?? null,
         key: t.key ?? null,
