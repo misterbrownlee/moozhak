@@ -20,15 +20,17 @@
   <div class="card bg-base-100 shadow-xl print:shadow-none print:bg-white print:p-0 print:m-0 print:mt-[10px] w-[500px] print:w-[4in] ml-0">
     <div class="card-body print:p-0">
       <!-- Album Header -->
-      <div class="border-b border-gray-300 pb-2 mb-2">
-        <h1 class="text-xl print:text-[20px] font-bold">
+      <div class="border-b border-gray-300 pb-2 mb-2 min-w-0">
+        <h1 class="text-xl print:text-[20px] font-bold truncate min-w-0">
           <span x-text="item.title"></span>
           <template x-if="item.year">
             <span x-text="' (' + item.year + ')'"></span>
           </template>
-          <span class="font-normal"> — </span>
-          <span class="font-normal" x-text="item.artist"></span>
         </h1>
+        <p
+          class="text-xl print:text-[20px] font-normal truncate min-w-0 text-base-content print:text-black"
+          x-text="item.artist"
+        ></p>
         <template x-if="item.boxSet">
           <p class="text-sm print:text-[10px] text-primary" x-text="'[boxed set - ' + item.boxSet + ']'"></p>
         </template>
@@ -46,8 +48,7 @@
                       <tr>
                         <td class="w-[15px] pr-[1px] print:text-black" x-text="track.position || i + 1"></td>
                         <td class="print:text-black" x-text="track.title || 'Untitled'"></td>
-                        <td class="print:text-black text-sm max-w-[8rem] truncate" x-text="printTrackRowArtist(track)"></td>
-                        <td class="w-12 text-right text-base-content/60 print:text-black" x-text="track.bpm || '--'"></td>
+                        <td class="w-12 text-right text-base-content/60 print:text-black" x-text="track.bpm || ''"></td>
                         <td class="w-12 text-center text-base-content/60 print:text-black" x-text="track.key || '--'"></td>
                         <td class="w-12 text-center text-base-content/60 print:text-black" x-text="track.timeSignature || '--'"></td>
                         <td class="w-16 text-right text-base-content/60 print:text-black" x-text="track.duration || ''"></td>
@@ -70,8 +71,7 @@
                 <tr>
                   <td class="w-[15px] pr-[1px] print:text-black" x-text="track.position || i + 1"></td>
                   <td class="print:text-black" x-text="track.title || 'Untitled'"></td>
-                  <td class="print:text-black text-sm max-w-[8rem] truncate" x-text="printTrackRowArtist(track)"></td>
-                  <td class="w-12 text-right text-base-content/60 print:text-black" x-text="track.bpm || '--'"></td>
+                  <td class="w-12 text-right text-base-content/60 print:text-black" x-text="track.bpm || ''"></td>
                   <td class="w-12 text-center text-base-content/60 print:text-black" x-text="track.key || '--'"></td>
                   <td class="w-12 text-center text-base-content/60 print:text-black" x-text="track.timeSignature || '--'"></td>
                   <td class="w-16 text-right text-base-content/60 print:text-black" x-text="track.duration || ''"></td>
@@ -145,15 +145,6 @@ function printPage() {
       if (typeof v === 'number' && Number.isFinite(v)) return v;
       const parsed = Number(String(v ?? '').trim());
       return Number.isFinite(parsed) ? parsed : 0;
-    },
-
-    printTrackRowArtist(track) {
-      const album = this.item?.artist ?? '';
-      const M = window.MoozhakDomain;
-      if (M?.resolveTrackRowArtist) {
-        return M.resolveTrackRowArtist(track, album);
-      }
-      return album || 'Unknown Artist';
     },
 
     getSortedSides() {
